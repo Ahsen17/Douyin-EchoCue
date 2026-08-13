@@ -1,0 +1,247 @@
+[project]
+name = "aigc"
+version = "0.1.0"
+description = "Generic project for aigc apps."
+readme = "README.md"
+authors = [
+    { name = "ahsen17", email = "mesailedward@qq.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "aiofiles",
+    "aiosqlite",
+    "async-lru",
+    "asyncpg",
+    "litestar[jwt,jinja,sqlalchemy,structlog]",
+    "msgspec",
+    "pydantic",
+    "opentelemetry-api",
+    "opentelemetry-instrumentation-litestar",
+    "opentelemetry-sdk",
+    "redis[hiredis]",
+    "uuid-utils",
+]
+
+[project.scripts]
+app = "aigc.asgi:entrypoint"
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling", "setuptools"]
+
+[dependency-groups]
+docs = [
+  "myst-parser",
+  "shibuya",
+  "sphinx",
+  "sphinx-autobuild",
+  "sphinx-copybutton",
+  "sphinx-design",
+  "sphinxcontrib-mermaid",
+  "sphinxext-opengraph",
+  "sphinx-tippy",
+]
+lint = [
+  "mypy[faster-cache]",
+  "pre-commit",
+  "pyright",
+  "ruff",
+  "slotscheck",
+  "types-aiofiles",
+]
+test = [
+  "coverage",
+  "pytest",
+  "pytest-asyncio",
+  "pytest-cov",
+  "pytest-mock",
+  "pytest-xdist",
+]
+
+[[tool.uv.index]]
+name = "tencent"
+url = "https://mirrors.cloud.tencent.com/pypi/simple/"
+
+[tool.uv]
+default-groups = "all"
+
+[tool.ruff]
+src = ["src", "tests"]
+line-length = 120
+target-version = "py312"
+
+
+[tool.ruff.lint]
+extend-select = [
+  "A",    # flake8-builtins
+  "B",    # flake8-bugbear
+  "BLE",  # flake8-blind-except
+  "C4",   # flake8-comprehensions
+  "C90",  # mccabe
+  "D",    # pydocstyle
+  "DJ",   # flake8-django
+  "DTZ",  # flake8-datetimez
+  "E",    # pycodestyle errors
+  "ERA",  # eradicate
+  "F",    # pyflakes
+  "FURB", # refurb
+  "G",    # flake8-logging-format
+  "I",    # isort
+  "ICN",  # flake8-import-conventions
+  "ISC",  # flake8-implicit-str-concat
+  "N",    # pep8-naming
+  "PIE",  # flake8-pie
+  "PLC",  # pylint - convention
+  "PLE",  # pylint - error
+  "PLW",  # pylint - warning
+  "PTH",  # flake8-use-pathlib
+  "PERF", # perflint
+  "Q",    # flake8-quotes
+  "RET",  # flake8-return
+  "RUF",  # Ruff-specific rules
+  "S",    # flake8-bandit
+  "SIM",  # flake8-simplify
+  "T10",  # flake8-debugger
+  "T20",  # flake8-print
+  "TC",   # flake8-type-checking
+  "TID",  # flake8-tidy-imports
+  "UP",   # pyupgrade
+  "W",    # pycodestyle - warning
+  "YTT",  # flake8-2020
+]
+ignore = [
+  "A003",    # flake8-builtins - class attribute {name} is shadowing a python builtin
+  "B010",    # flake8-bugbear - do not call setattr with a constant attribute value
+  "D100",    # pydocstyle - missing docstring in public module
+  "D101",    # pydocstyle - missing docstring in public class
+  "D102",    # pydocstyle - missing docstring in public method
+  "D103",    # pydocstyle - missing docstring in public function
+  "D104",    # pydocstyle - missing docstring in public package
+  "D105",    # pydocstyle - missing docstring in magic method
+  "D106",    # pydocstyle - missing docstring in public nested class
+  "D107",    # pydocstyle - missing docstring in __init__
+  "D202",    # pydocstyle - no blank lines allowed after function docstring
+  "D205",    # pydocstyle - 1 blank line required between summary line and description
+  "D415",    # pydocstyle - first line should end with a period, question mark, or exclamation point
+  "E501",    # pycodestyle line too long, handled by ruff format
+  "EXE",     # flake8-executable - missing shebang line
+  "PLW2901", # pylint - for loop variable overwritten by assignment target
+  "RUF012",  # Ruff-specific rule - annotated with classvar
+  "ISC001",  # Ruff formatter incompatible
+  "CPY001",  # ruff - copyright notice at the top of the file
+  "PLC0414", # pylint - missing module docstring
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
+"src/aigc/db/migrations/versions/*.py" = ["N999"]
+"**/{tests,docs,tools}/*" = ["E402"]
+"docs/**/*.*" = ["S", "B", "DTZ", "A", "TC", "ERA", "D", "RET"]
+"tests/**/*.*" = [
+  "A",
+  "ARG",
+  "B",
+  "BLE",
+  "C901",
+  "D",
+  "DTZ",
+  "EM",
+  "FBT",
+  "G",
+  "N",
+  "PGH",
+  "PIE",
+  "PLR",
+  "PLW",
+  "PTH",
+  "RSE",
+  "S",
+  "S101",
+  "SIM",
+  "TC",
+  "TRY",
+  "E721",
+]
+
+[tool.ruff.format]
+line-ending = "lf"
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = 88
+
+[tool.mypy]
+packages = ["aigc", "tests"]
+exclude = ["src/aigc/db/.*"]
+strict = true
+disallow_any_generics = false
+implicit_reexport = false
+warn_no_return = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+enable_error_code = [
+  "truthy-iterable",
+  "unused-awaitable",
+  "possibly-undefined",
+  "redundant-self",
+]
+show_error_codes = true
+pretty = true
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib", "--asyncio-mode=auto"]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+  "ignore::SyntaxWarning:jieba.*"
+]
+testpaths = ["tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "if TYPE_CHECKING:",
+  "pragma: no cover",
+  "if __name__ == .__main__.:",
+  "def __repr__",
+  'if self\.debug:',
+  'if settings\.DEBUG',
+  "raise AssertionError",
+  "raise NotImplementedError",
+  'class .*\bProtocol\):',
+  '@(abc\.)?abstractmethod',
+]
+omit = ["*/tests/*"]
+show_missing = true
+
+[tool.coverage.run]
+branch = true
+concurrency = ["multiprocessing", "thread"]
+omit = ["*/tests/*", "__init__.py", "__main__.py"]
+parallel = true
+source = ["src"]
+
+[tool.git-cliff.git]
+commit_parsers = [
+  { message = "^feat", group = "<!-- 0 -->🚀 Features" },
+  { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+  { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
+  { message = "^doc", group = "<!-- 3 -->📚 Documentation" },
+  { message = "^perf", group = "<!-- 4 -->⚡ Performance" },
+  { message = "^style", group = "<!-- 5 -->🎨 Styling" },
+  { message = "^test", group = "<!-- 6 -->🧪 Testing" },
+  { message = "^build", group = "<!-- 7 -->📦 Build System" },
+  { message = "^chore\\(release\\): prepare for", skip = true },
+  { message = "^chore", group = "<!-- 8 -->⚙️ Miscellaneous Tasks" },
+  { body = ".*security", group = "<!-- 9 -->🛡️ Security" },
+  { message = "^revert", group = "<!-- 10 -->◀️ Revert" },
+  { message = ".*", group = "<!-- 10 -->💼 Other" },
+]
+conventional_commits = true
+sort_commits = "oldest"
+tag_pattern = "v[0-9]*"
