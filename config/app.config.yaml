@@ -1,0 +1,25 @@
+app:
+  host: "0.0.0.0"
+  port: 8000
+
+logging:
+  level: "INFO"
+  format: "console"
+  file:
+    enabled: true
+    path: "logs/app.log"
+
+redis:
+  dsn: "redis://redis:6379/0"
+  pool_enabled: true
+  pool_size: 50
+  connection_timeout: 10
+
+qdrant:
+  host: "qdrant"
+  port: 6333
+  grpc_port: 6334
+  prefer_grpc: true
+
+alchemy:
+  url: "postgresql+asyncpg://aigc:aigc@postgres:5432/aigc"

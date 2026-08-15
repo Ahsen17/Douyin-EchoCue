@@ -82,13 +82,7 @@ ifeq ($(IS_WINDOWS),1)
 	@echo   fix               Run ruff to auto-fix issues
 	@echo   check             Run all linting and tests
 	@echo   check-all         Run all linting, tests, and coverage checks
-	@echo   compose-build     Build Docker Compose services
-	@echo   compose-up        Start Docker Compose services
-	@echo   compose-down      Stop Docker Compose services
-	@echo   compose-restart   Restart Docker Compose services
-	@echo   compose-logs      Tail Docker Compose service logs
-	@echo   compose-ps        List Docker Compose services
-	@echo   compose-pull      Pull Docker Compose service images
+	@echo   compose           Manage docker compose services
 	@echo   docs-clean        Dump the existing built docs
 	@echo   docs-build        Build documentation
 	@echo   docs-serve        Serve the docs locally
@@ -226,40 +220,67 @@ endif
 # Docker Compose
 # =============================================================================
 
-.PHONY: compose-build
-compose-build:				## Build Docker Compose services, optionally SERVICE=app
-	@echo $(INFO) Building Docker Compose services...
-	docker compose build $(SERVICE)
-	@echo $(OK) Docker Compose services built
+COMPOSE_DEFAULT_SERVICE := app
+COMPOSE_ARGS := $(filter-out compose,$(MAKECMDGOALS))
+COMPOSE_COMMAND := $(word 1,$(COMPOSE_ARGS))
+COMPOSE_SERVICE := $(or $(word 2,$(COMPOSE_ARGS)),$(COMPOSE_DEFAULT_SERVICE))
+COMPOSE_COMMANDS := build init up down restart logs ps pull
 
-.PHONY: compose-up
-compose-up:				## Start Docker Compose services, optionally SERVICE=app
-	@echo $(INFO) Starting Docker Compose services...
-	docker compose up -d $(SERVICE)
-	@echo $(OK) Docker Compose services started
+ifeq ($(firstword $(MAKECMDGOALS)),compose)
+$(eval .PHONY: $(COMPOSE_ARGS))
+$(eval $(COMPOSE_ARGS):;@:)
+endif
 
-.PHONY: compose-down
-compose-down:				## Stop Docker Compose services
+.PHONY: compose
+compose:				## Show Docker Compose commands
+ifeq ($(COMPOSE_COMMAND),)
+	@echo "Usage:"
+	@echo "  make compose <command>"
+	@echo
+	@echo "Default service:"
+	@echo "  $(COMPOSE_DEFAULT_SERVICE)"
+	@echo
+	@echo "Commands:"
+	@echo "  build       Build the default service image"
+	@echo "  init        Run database migrations with the default service image"
+	@echo "  up          Start the default service"
+	@echo "  down        Stop Docker Compose services"
+	@echo "  restart     Restart the default service"
+	@echo "  logs        Tail default service logs"
+	@echo "  ps          List Docker Compose services"
+	@echo "  pull        Pull the default service image"
+else ifeq ($(filter $(COMPOSE_COMMAND),$(COMPOSE_COMMANDS)),)
+	$(error Unsupported compose command "$(COMPOSE_COMMAND)". Use one of: $(COMPOSE_COMMANDS))
+else ifeq ($(COMPOSE_COMMAND),build)
+	@echo $(INFO) Building Docker Compose service $(COMPOSE_SERVICE)...
+	docker compose build $(COMPOSE_SERVICE)
+	@echo $(OK) Docker Compose service built
+else ifeq ($(COMPOSE_COMMAND),init)
+	@echo $(INFO) Initializing Docker Compose services...
+	docker compose run --rm $(COMPOSE_DEFAULT_SERVICE) uv run app database upgrade --no-prompt
+	@echo $(OK) Initializing Docker Compose services completed
+else ifeq ($(COMPOSE_COMMAND),up)
+	@echo $(INFO) Starting Docker Compose service $(COMPOSE_SERVICE)...
+	docker compose up -d $(COMPOSE_SERVICE)
+	@echo $(OK) Docker Compose service started
+else ifeq ($(COMPOSE_COMMAND),down)
 	@echo $(INFO) Stopping Docker Compose services...
 	docker compose down
 	@echo $(OK) Docker Compose services stopped
-
-.PHONY: compose-restart
-compose-restart: compose-down compose-up	## Restart Docker Compose services, optionally SERVICE=app
-
-.PHONY: compose-logs
-compose-logs:				## Tail Docker Compose service logs, optionally SERVICE=app
-	docker compose logs -f $(SERVICE)
-
-.PHONY: compose-ps
-compose-ps:				## List Docker Compose services
+else ifeq ($(COMPOSE_COMMAND),restart)
+	@echo $(INFO) Restarting Docker Compose service $(COMPOSE_SERVICE)...
+	docker compose down
+	docker compose up -d $(COMPOSE_SERVICE)
+	@echo $(OK) Docker Compose service restarted
+else ifeq ($(COMPOSE_COMMAND),logs)
+	docker compose logs -f $(COMPOSE_SERVICE)
+else ifeq ($(COMPOSE_COMMAND),ps)
 	docker compose ps
-
-.PHONY: compose-pull
-compose-pull:				## Pull Docker Compose service images, optionally SERVICE=postgres
-	@echo $(INFO) Pulling Docker Compose service images...
-	docker compose pull $(SERVICE)
-	@echo $(OK) Docker Compose service images pulled
+else ifeq ($(COMPOSE_COMMAND),pull)
+	@echo $(INFO) Pulling Docker Compose service image $(COMPOSE_SERVICE)...
+	docker compose pull $(COMPOSE_SERVICE)
+	@echo $(OK) Docker Compose service image pulled
+endif
 
 # =============================================================================
 # Tests, Linting, Coverage

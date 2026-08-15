@@ -7,7 +7,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 COPY pyproject.toml uv.lock README.md ./
-COPY config.yaml ./config.yaml
+COPY config/app.config.yaml ./config.yaml
 COPY src ./src
 
 RUN uv sync --frozen --no-dev
