@@ -15,6 +15,7 @@ This directory collects all project constraints that apply to code implementatio
 - [Configuration and Runtime Standards](./development-standards/configuration-and-runtime-standards.md): Constraints for configuration structure, configuration loading, environment variables, and application startup boundaries.
 - [Logging Standards](./development-standards/logging-standards.md): Constraints for logging configuration, output formats, file logging, request logging, and sensitive information boundaries.
 - [Project Command Standards](./development-standards/project-command-standards.md): Constraints for project command entry points such as `app` and `make`, and for direct use of lower-level tools.
+- [Git Project Management Standards](./development-standards/git-project-management-standards.md): Constraints for branch, atomic commit, and Git metadata related project management workflows.
 - [API Design Standards](./api-and-data-standards/api-design-standards.md): Constraints for HTTP paths, methods, parameters, responses, and error boundaries.
 - [Authentication and Request Context Standards](./api-and-data-standards/authentication-and-request-context-standards.md): Constraints for user login state, Redis sessions, current-user resolution, and request context usage.
 - [Data Structure and Response Standards](./api-and-data-standards/data-structure-and-response-standards.md): Constraints for using `BaseStruct`, `CamelizedBaseStruct`, `GenericResponse`, `Pagination`, `CustomModel`, and `pydantic.BaseModel`.

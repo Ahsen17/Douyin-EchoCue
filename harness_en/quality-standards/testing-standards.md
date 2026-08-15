@@ -101,4 +101,7 @@ For changes involving documentation builds, run:
 make docs-build
 ```
 
-If validation cannot be run, state the reason and remaining risk.
+- When milestone or feature development is committed as atomic subtasks, each subtask must complete validation that matches its risk before committing.
+- The validation scope must at least cover tests directly affected by the subtask; when shared abstractions, databases, response structures, configuration, or cross-module contracts are affected, expand validation to the corresponding quality gates.
+- If a subtask changes documentation only, code tests are not required, but applicable documentation validation should be run; state the reason when it cannot be run.
+- If validation cannot be run, state the reason and remaining risk.
