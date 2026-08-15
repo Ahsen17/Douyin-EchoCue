@@ -5,7 +5,7 @@ from litestar.plugins import InitPluginProtocol
 from qdrant_client import AsyncQdrantClient
 
 from aigc.base import Config
-from aigc.lib.qdrant import QdrantClientFactory
+from aigc.lib import QdrantClientFactory
 
 if TYPE_CHECKING:
     from litestar.config.app import AppConfig

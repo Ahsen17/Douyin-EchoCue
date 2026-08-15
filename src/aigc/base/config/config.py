@@ -9,6 +9,7 @@ from .alchemy import AlchemyConfig
 from .app import AppConfig
 from .auth import AuthConfig
 from .constants import BASE_DIR
+from .embedding import EmbeddingConfig
 from .logging import LoggingConfig
 from .qdrant import QdrantConfig
 from .redis import RedisConfig
@@ -27,6 +28,8 @@ class Config(BaseStruct):
     qdrant: QdrantConfig = field(default_factory=QdrantConfig)
     alchemy: AlchemyConfig = field(default_factory=AlchemyConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
+
+    embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
 
     @classmethod
     def get(cls, filename: str = "config.yaml") -> Self:

@@ -19,6 +19,10 @@ settings.*.json
 *.log
 tmp/
 
+# Ai coding
+.codex/
+.agents/
+
 # Distribution / packaging
 .Python
 build/

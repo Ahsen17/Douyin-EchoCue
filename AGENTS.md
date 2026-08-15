@@ -11,12 +11,12 @@
 
 ## Mandatory Standards
 
-- The project must strictly follow the standards under either `harness/` or `harness_en/`.
+- The project must strictly follow the standards under either `.codex/harness/` or `.codex/harness_en/`.
 - Reading one standards directory is sufficient for task context.
-- If the user does not explicitly specify which standards directory to use, read `harness/` by default.
-- The standards in `harness/` and `harness_en/` are semantic mirrors. Treat them as equivalent sources of truth.
-- When updating content under `harness/`, synchronously update the corresponding content under `harness_en/`.
-- When updating content under `harness_en/`, synchronously update the corresponding content under `harness/`.
+- If the user does not explicitly specify which standards directory to use, read `.codex/harness/` by default.
+- The standards in `.codex/harness/` and `.codex/harness_en/` are semantic mirrors. Treat them as equivalent sources of truth.
+- When updating content under `.codex/harness/`, synchronously update the corresponding content under `.codex/harness_en/`.
+- When updating content under `.codex/harness_en/`, synchronously update the corresponding content under `.codex/harness/`.
 - The Chinese and English standards must preserve the same meaning. Directory names, file names, headings, and body content should remain semantically mapped across both directories.
 
 ## Repository Layout
@@ -31,8 +31,8 @@
 - `src/aigc/lib`: Lightweight pure utilities unrelated to business logic.
 - `tests`: Automated tests.
 - `docs`: Product, architecture, and delivery documentation.
-- `harness`: Chinese engineering standards and collaboration constraints.
-- `harness_en`: English engineering standards and collaboration constraints.
+- `.codex/harness`: Chinese engineering standards and collaboration constraints.
+- `.codex/harness_en`: English engineering standards and collaboration constraints.
 
 ## Development Commands
 
@@ -119,8 +119,8 @@ make docs-build
 
 ## Documentation and Standards Maintenance
 
-- Keep `harness/` and `harness_en/` synchronized whenever either changes.
+- Keep `.codex/harness/` and `.codex/harness_en/` synchronized whenever either changes.
 - Preserve meaning exactly when translating standards between Chinese and English.
-- Use idiomatic technical English in `harness_en/`; do not translate mechanically when a better standard English term exists.
+- Use idiomatic technical English in `.codex/harness_en/`; do not translate mechanically when a better standard English term exists.
 - Keep links in both standards indexes valid after renames or moves.
 - When adding a new standards document, add its counterpart in the other language and update both indexes.

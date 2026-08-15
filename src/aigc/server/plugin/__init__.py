@@ -10,6 +10,7 @@ __all__ = (
     "AlchemyPlugin",
     "AuthPlugin",
     "ContextPlugin",
+    "EmbedderPlugin",
     "QdrantPlugin",
     "ScalarRenderPlugin",
 )
