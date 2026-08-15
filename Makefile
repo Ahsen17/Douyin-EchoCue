@@ -82,6 +82,13 @@ ifeq ($(IS_WINDOWS),1)
 	@echo   fix               Run ruff to auto-fix issues
 	@echo   check             Run all linting and tests
 	@echo   check-all         Run all linting, tests, and coverage checks
+	@echo   compose-build     Build Docker Compose services
+	@echo   compose-up        Start Docker Compose services
+	@echo   compose-down      Stop Docker Compose services
+	@echo   compose-restart   Restart Docker Compose services
+	@echo   compose-logs      Tail Docker Compose service logs
+	@echo   compose-ps        List Docker Compose services
+	@echo   compose-pull      Pull Docker Compose service images
 	@echo   docs-clean        Dump the existing built docs
 	@echo   docs-build        Build documentation
 	@echo   docs-serve        Serve the docs locally
@@ -214,6 +221,45 @@ else
 	@rm -rf .venv
 endif
 	@echo $(OK) Virtual environment destroyed
+
+# =============================================================================
+# Docker Compose
+# =============================================================================
+
+.PHONY: compose-build
+compose-build:				## Build Docker Compose services, optionally SERVICE=app
+	@echo $(INFO) Building Docker Compose services...
+	docker compose build $(SERVICE)
+	@echo $(OK) Docker Compose services built
+
+.PHONY: compose-up
+compose-up:				## Start Docker Compose services, optionally SERVICE=app
+	@echo $(INFO) Starting Docker Compose services...
+	docker compose up -d $(SERVICE)
+	@echo $(OK) Docker Compose services started
+
+.PHONY: compose-down
+compose-down:				## Stop Docker Compose services
+	@echo $(INFO) Stopping Docker Compose services...
+	docker compose down
+	@echo $(OK) Docker Compose services stopped
+
+.PHONY: compose-restart
+compose-restart: compose-down compose-up	## Restart Docker Compose services, optionally SERVICE=app
+
+.PHONY: compose-logs
+compose-logs:				## Tail Docker Compose service logs, optionally SERVICE=app
+	docker compose logs -f $(SERVICE)
+
+.PHONY: compose-ps
+compose-ps:				## List Docker Compose services
+	docker compose ps
+
+.PHONY: compose-pull
+compose-pull:				## Pull Docker Compose service images, optionally SERVICE=postgres
+	@echo $(INFO) Pulling Docker Compose service images...
+	docker compose pull $(SERVICE)
+	@echo $(OK) Docker Compose service images pulled
 
 # =============================================================================
 # Tests, Linting, Coverage

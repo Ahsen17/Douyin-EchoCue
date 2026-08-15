@@ -1,0 +1,15 @@
+.git
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.venv
+__pycache__
+*.pyc
+build
+dist
+htmlcov
+logs
+.coverage
+coverage.json
+coverage.xml
+node_modules

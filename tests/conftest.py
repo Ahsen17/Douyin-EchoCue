@@ -13,6 +13,7 @@ from aigc.auth.model import UserModel
 from aigc.auth.security import create_auth
 from aigc.base import AlchemyConfig, Config
 from aigc.controller.auth import AuthController
+from aigc.controller.system import SystemController
 from aigc.shared import ApplicationError
 from aigc.shared.context import provide_request_context
 from aigc.shared.exception import (
@@ -84,7 +85,7 @@ def create_test_user(test_config: Config) -> Callable[..., Awaitable[UserModel]]
 @pytest.fixture
 def app(test_config: Config) -> Litestar:
     return Litestar(
-        route_handlers=[AuthController],
+        route_handlers=[AuthController, SystemController],
         dependencies={"ctx": Provide(provide_request_context)},
         exception_handlers={
             ApplicationError: app_error_handler,
