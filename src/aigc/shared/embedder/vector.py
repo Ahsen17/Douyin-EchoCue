@@ -28,5 +28,5 @@ class MultiVector(BaseStruct):
     """Multi-vector representation."""
 
     dense_full: DenseVector
-    dense_marl: DenseVector | None = None
+    dense_mrl: DenseVector | None = None
     sparse: SparseVector | None = None

@@ -115,15 +115,13 @@ class QdrantCollectionCreator:
 
                 return await self._client.create_collection(
                     collection_name=collection_name,
-                    vectors_config={"dense": config_cache["dense"]},
+                    vectors_config=config_cache["dense"],
                 )
 
             case "sparse":
                 return await self._client.create_collection(
                     collection_name=collection_name,
-                    sparse_vectors_config={
-                        "sparse": config_cache["sparse"],
-                    },
+                    sparse_vectors_config={"sparse": config_cache["sparse"]},
                 )
 
             case "hybrid":
@@ -132,10 +130,8 @@ class QdrantCollectionCreator:
 
                 return await self._client.create_collection(
                     collection_name=collection_name,
-                    vectors_config={
-                        "dense": config_cache["dense"],
-                        "sparse": config_cache["sparse"],
-                    },
+                    vectors_config=config_cache["dense"],
+                    sparse_vectors_config={"sparse": config_cache["sparse"]},
                 )
 
             case "multi":
@@ -153,5 +149,5 @@ class QdrantCollectionCreator:
                         "dense_full": config_cache["dense"],
                         "dense_mrl": config_cache["dense_mrl"],
                     },
-                    sparse_vectors_config=config_cache["sparse"] if sparse else None,
+                    sparse_vectors_config={"sparse": config_cache["sparse"]} if sparse else None,
                 )
