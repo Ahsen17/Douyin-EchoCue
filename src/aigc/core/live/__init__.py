@@ -1,5 +1,7 @@
 from .classification import (
+    FakeSemanticClassificationClient,
     SemanticClassificationCandidateStruct,
+    SemanticClassificationClient,
     SemanticClassificationRequestStruct,
     SemanticClassificationResultStruct,
 )
@@ -26,10 +28,12 @@ __all__ = (
     "CommentWindowStruct",
     "CommentWindowVO",
     "DouyinLiveCommentSource",
+    "FakeSemanticClassificationClient",
     "LiveCommentEventCreate",
     "LiveCommentEventStruct",
     "LiveCommentEventVO",
     "SemanticClassificationCandidateStruct",
+    "SemanticClassificationClient",
     "SemanticClassificationRequestStruct",
     "SemanticClassificationResultStruct",
     "SemanticType",

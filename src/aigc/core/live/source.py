@@ -92,7 +92,7 @@ class DouyinLiveCommentSource:
 
         handler = window_handler or CommentWindowHandler()
         async for event in self.stream_comments(room_identifier):
-            yield handler.ingest_comment(event)
+            yield await handler.ingest_comment(event)
 
 
 def _get_mapping(data: Mapping[str, object], key: str) -> Mapping[str, object]:

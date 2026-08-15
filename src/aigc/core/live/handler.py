@@ -4,7 +4,11 @@ from collections import defaultdict
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
-from .enum import SemanticType
+from .classification import (
+    FakeSemanticClassificationClient,
+    SemanticClassificationClient,
+    SemanticClassificationRequestStruct,
+)
 from .schema import LiveCommentEventStruct
 from .window import CommentWindowItemStruct, CommentWindowStruct
 
@@ -14,12 +18,17 @@ __all__ = ("CommentWindowHandler",)
 class CommentWindowHandler:
     """Maintain in-memory comment windows for livestream rooms."""
 
-    def __init__(self, window_duration: timedelta = timedelta(seconds=30)) -> None:
+    def __init__(
+        self,
+        window_duration: timedelta = timedelta(seconds=30),
+        classification_client: SemanticClassificationClient | None = None,
+    ) -> None:
         self._window_duration = window_duration
+        self._classification_client = classification_client or FakeSemanticClassificationClient()
         self._items_by_room: dict[str, list[CommentWindowItemStruct]] = defaultdict(list)
         self._comment_ids_by_room: dict[str, set[str]] = defaultdict(set)
 
-    def ingest_comment(self, event: LiveCommentEventStruct) -> CommentWindowStruct:
+    async def ingest_comment(self, event: LiveCommentEventStruct) -> CommentWindowStruct:
         """Add a comment event to its room window and return the current snapshot."""
 
         room_id = event.room_id
@@ -35,15 +44,19 @@ class CommentWindowHandler:
             self._items_by_room[room_id].append(item)
             self._comment_ids_by_room[room_id].add(item.comment_id)
 
-        return self.get_window(room_id, now=event.occurred_at)
+        return await self.get_window(room_id, now=event.occurred_at)
 
-    def get_window(self, room_id: str, now: datetime | None = None) -> CommentWindowStruct:
+    async def get_window(self, room_id: str, now: datetime | None = None) -> CommentWindowStruct:
         """Return the current comment window snapshot for a room."""
 
         window_ended_at = now or datetime.now(UTC)
         self._prune_room(room_id, window_ended_at)
         items = list(self._items_by_room[room_id])
         window_started_at = window_ended_at - self._window_duration
+        text_batch = [item.content for item in items]
+        result = await self._classification_client.classify(
+            SemanticClassificationRequestStruct(room_id=room_id, text_batch=text_batch)
+        )
 
         return CommentWindowStruct(
             room_id=room_id,
@@ -52,8 +65,8 @@ class CommentWindowHandler:
             total_count=len(items),
             unique_user_count=len({item.user_id for item in items}),
             comments=items,
-            text_batch=[item.content for item in items],
-            semantic_type=SemanticType.OTHER,
+            text_batch=text_batch,
+            semantic_type=result.semantic_type,
         )
 
     def _prune_room(self, room_id: str, now: datetime) -> None:
@@ -62,8 +75,8 @@ class CommentWindowHandler:
         self._items_by_room[room_id] = items
         self._comment_ids_by_room[room_id] = {item.comment_id for item in items}
 
-    def load_comments(self, events: Iterable[LiveCommentEventStruct]) -> None:
+    async def load_comments(self, events: Iterable[LiveCommentEventStruct]) -> None:
         """Load multiple comment events into their room windows."""
 
         for event in events:
-            self.ingest_comment(event)
+            await self.ingest_comment(event)

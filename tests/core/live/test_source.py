@@ -39,7 +39,7 @@ class TestDouyinLiveCommentSource:
 
         assert source.build_url("516466932480") == "ws://douyin-live:1088/ws/516466932480"
 
-    def test_pushes_comment_event_to_comment_window(self) -> None:
+    async def test_pushes_comment_event_to_comment_window(self) -> None:
         source = DouyinLiveCommentSource()
         event = source.parse_comment(
             json.dumps(
@@ -54,7 +54,7 @@ class TestDouyinLiveCommentSource:
         )
 
         assert event is not None
-        window = CommentWindowHandler().ingest_comment(event)
+        window = await CommentWindowHandler().ingest_comment(event)
 
         assert window.total_count == 1
         assert window.unique_user_count == 1
