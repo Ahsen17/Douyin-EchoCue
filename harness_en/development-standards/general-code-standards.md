@@ -1,14 +1,13 @@
 # General Code Standards
 
-This document defines constraints for general code implementation. Tool configuration is governed by `pyproject.toml`, `Makefile`, and actual validation results.
+This document defines constraints for general code implementation. Module placement, command entry points, test scope, and data-structure details are governed by their corresponding topic standards.
 
 ## Baseline Conventions
 
 - Python version must be at least 3.12.
 - The project uses the `src` layout, and the core package name is `aigc`.
-- Dependency management uses `uv`.
-- Runtime dependencies are declared in `project.dependencies`.
-- Development dependencies for tests, type checking, documentation, and similar tasks are declared in the corresponding dependency groups.
+- Tool configuration is governed by `pyproject.toml`, `Makefile`, and actual validation results.
+- Dependency management uses `uv`; dependency grouping follows project configuration.
 - Do not commit virtual environments, caches, build artifacts, secrets, or local configuration.
 
 ## Code Style
@@ -35,6 +34,7 @@ This document defines constraints for general code implementation. Tool configur
 - `__init__.py` does not need a module-level docstring when it only aggregates package exports.
 - Code docstrings use English by default.
 - Module docstrings describe module responsibility, layer boundaries, and key constraints.
+- Module docstrings describe only long-lived code responsibilities and must not bind modules to MVP, M1, M2, phases, milestones, iteration plans, or development workflow.
 - Simple modules may use a one-line docstring.
 - Use multi-line docstrings when external frameworks, databases, authentication, security, or other boundaries are involved.
 - Module docstrings must not include author, date, or change history, and must not repeat the file name.
@@ -43,6 +43,14 @@ This document defines constraints for general code implementation. Tool configur
 - Separate different processing steps within the same function with blank lines.
 - Do not cram variable preparation, validation branches, exception handling, and return construction together.
 - Docstrings describe responsibility or behavior; they do not restate type annotations.
+
+## Enumeration Standards
+
+- Domain enumerations belong in the owning domain's `enum.py` by default.
+- Enum classes are named after business concepts, and enum members use upper snake case.
+- String enums should inherit from `StrEnum` and use `auto()` to generate values, avoiding repeated handwritten strings.
+- Each enum member should be followed by a short business description string that explains the meaning of that value.
+- If a field has predefined and finite business values, prefer an enum instead of a bare `str`.
 
 ## Typing Standards
 
@@ -74,18 +82,3 @@ This document defines constraints for general code implementation. Tool configur
 - Do not use `print` as a runtime logging mechanism, except for startup failure messages in command-line entry points.
 - Log messages use parameterized formatting.
 - Logging configuration and request logging rules must follow the Logging Standards.
-
-## Common Commands
-
-```bash
-make install
-make sync
-make fix
-make lint
-make test
-make coverage
-make check
-make docs-build
-```
-
-Run at least `make check` before committing. If validation cannot be run, state the reason and remaining risk.

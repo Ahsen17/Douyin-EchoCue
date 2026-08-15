@@ -7,7 +7,7 @@ This document defines constraints for user login state, server-side sessions, cu
 - User login state uses Litestar `SessionAuth` by default.
 - Session data is stored in Redis by default; memory store is used only for local or test scenarios.
 - Cookies store only the session id; sessions store only minimal identity information, using `user_id` by default.
-- The current user object uniformly uses the service-layer `UserStruct`; database models must not be exposed to controllers.
+- The current user object uniformly uses domain schemas and does not expose database models to controllers.
 - System-level APIs uniformly use the `/system` prefix and are ignored by prefix in authentication exclusion rules.
 
 ## Lifecycle
@@ -23,7 +23,7 @@ This document defines constraints for user login state, server-side sessions, cu
 - `RequestContext` is defined in `src/aigc/shared/context.py` and is built from `request.user` and `request.session`.
 - Business code does not parse cookies or sessions directly.
 - Cookies are not a business identity source; identity resolution is based on authentication middleware and session data.
-- An anonymous context may exist; request rejection must be handled explicitly by authentication, a guard, or the controller.
+- An anonymous context may exist; request rejection is handled by authentication, guards, or controllers according to interface requirements.
 
 ## Registration
 

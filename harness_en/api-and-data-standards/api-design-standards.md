@@ -1,6 +1,6 @@
 # API Design Standards
 
-This document defines constraints for HTTP API paths, methods, parameters, responses, and error boundaries. Project APIs explicitly follow RESTful style and should model around resources first. Data structure details are governed by the Data Structure and Response Standards.
+This document defines constraints for HTTP API resource modeling, route declarations, parameters, responses, and error boundaries. Data structure details are governed by the Data Structure and Response Standards.
 
 ## RESTful Principles
 
@@ -23,7 +23,7 @@ This document defines constraints for HTTP API paths, methods, parameters, respo
 ## HTTP Methods
 
 - `GET`: Query resources and produce no business side effects.
-- `POST`: Create resources; use it for non-resource actions only when they cannot be modeled as resources.
+- `POST`: Create resources; actions that cannot be modeled as resources are rare exceptions.
 - `PUT`: Replace a resource as a whole.
 - `PATCH`: Update part of a resource.
 - `DELETE`: Delete or deactivate a resource.
@@ -43,7 +43,7 @@ For actions that do not naturally map to resource CRUD, use clear action sub-res
 - Path parameters express resource identifiers.
 - Query parameters express filtering, sorting, pagination, and lightweight switches.
 - Request bodies express create, update, or complex operation payloads.
-- External fields in request bodies and query parameters use camel case by default.
+- External field naming in request bodies and query parameters follows the Data Structure and Response Standards.
 - Path parameters and route placeholders remain lower snake case.
 - Pagination parameters are uniformly `limit` and `offset`.
 - `limit` must be greater than 0, and `offset` must not be less than 0.

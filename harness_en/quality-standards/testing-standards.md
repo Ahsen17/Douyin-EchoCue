@@ -1,6 +1,6 @@
 # Testing Standards
 
-This document defines constraints for test case organization, test data, fixtures, and quality validation. Tests should verify behavior and prevent regressions, not only pursue coverage numbers.
+This document defines constraints for test organization, test scope, test data, fixtures, and quality gates. Tests should verify behavior and prevent regressions, not pursue meaningless coverage.
 
 ## Directory Structure
 
@@ -24,28 +24,28 @@ tests/
 
 Choose test types based on change risk:
 
-- Schema: serialization, defaults, field naming, and conversion behavior.
-- Service: business rules, data conversion, and exception paths.
+- Schema: not tested separately by default; cover only the minimum necessary behavior when custom conversion helpers, complex serialization boundaries, or known regression risks exist.
+- Service: database boundaries, data conversion, and exception paths.
+- Handler: business workflows, rule decisions, cross-capability orchestration, and exception paths.
 - Controller: routes, status codes, response wrapping, and parameter binding.
 - Database: model mapping, pagination, query conditions, and migration compatibility.
 - Configuration: default configuration, file loading, and format compatibility.
 - Regression: minimal reproductions for fixed defects.
 
-Changes to shared foundational capabilities, databases, response structures, and configuration loading need more complete coverage. Copy or comment changes do not require new tests.
+Tests should be limited to the minimum necessary scope and should prioritize key business flows and API contracts. Changes to shared foundational capabilities, databases, response structures, and configuration loading need more complete coverage. Copy, comment, or pure schema-shape changes do not require new tests.
 
 ## Writing Rules
 
 - Tests do not depend on execution order.
 - Tests do not share mutable global state.
 - Async code uses async tests.
-- Strict type checking covers test code; test functions, fixture parameters, and test doubles also need necessary type annotations.
+- Test functions, fixture parameters, and test doubles should include necessary type annotations.
 - External network calls must be replaced with mocks, stubs, or local fake implementations.
 - External resources such as databases, Redis, and the file system must use isolated fixtures.
 - Test-stage databases use temporary SQLite and must not connect to local or production databases.
 - Test-stage Redis uses memory mode and must not require a real Redis service.
 - API tests use Litestar's built-in test tools and do not start network services directly.
-- When testing controllers, class types, and dependency injection behavior, test cases are organized by class by default.
-- When test routes need to be defined, use CBV by default; use FBV only when CBV cannot cover the target.
+- When testing controllers and dependency injection behavior, test cases are organized by tested behavior by default.
 - Prefer real tables and data through SQLite fixtures when data can be constructed that way; mock only when stable construction is not possible.
 - Time-related tests use fixed times.
 - Random-value tests use fixed seeds or assert stable properties.
@@ -101,7 +101,7 @@ For changes involving documentation builds, run:
 make docs-build
 ```
 
-- When milestone or feature development is committed as atomic subtasks, each subtask must complete validation that matches its risk before committing.
+- When feature development is committed as atomic subtasks, each subtask must complete validation that matches its risk before committing.
 - The validation scope must at least cover tests directly affected by the subtask; when shared abstractions, databases, response structures, configuration, or cross-module contracts are affected, expand validation to the corresponding quality gates.
 - If a subtask changes documentation only, code tests are not required, but applicable documentation validation should be run; state the reason when it cannot be run.
 - If validation cannot be run, state the reason and remaining risk.
