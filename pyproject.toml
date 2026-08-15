@@ -21,6 +21,7 @@ dependencies = [
     "opentelemetry-api",
     "opentelemetry-instrumentation-litestar",
     "opentelemetry-sdk",
+    "qdrant-client",
     "redis[hiredis]",
     "uuid-utils",
 ]

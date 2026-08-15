@@ -10,6 +10,7 @@ from .app import AppConfig
 from .auth import AuthConfig
 from .constants import BASE_DIR
 from .logging import LoggingConfig
+from .qdrant import QdrantConfig
 from .redis import RedisConfig
 
 __all__ = ("Config",)
@@ -23,6 +24,7 @@ class Config(BaseStruct):
     app: AppConfig = field(default_factory=AppConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     redis: RedisConfig = field(default_factory=RedisConfig)
+    qdrant: QdrantConfig = field(default_factory=QdrantConfig)
     alchemy: AlchemyConfig = field(default_factory=AlchemyConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
 
@@ -101,6 +103,10 @@ _ENV_OVERRIDES: tuple[tuple[str, tuple[str, ...], type[Any]], ...] = (
     ("AIGC_ALCHEMY_ECHO", ("alchemy", "echo"), bool),
     ("AIGC_ALCHEMY_POOL_DISABLED", ("alchemy", "pool_disabled"), bool),
     ("AIGC_REDIS_DSN", ("redis", "dsn"), str),
+    ("AIGC_QDRANT_HOST", ("qdrant", "host"), str),
+    ("AIGC_QDRANT_PORT", ("qdrant", "port"), int),
+    ("AIGC_QDRANT_GRPC_PORT", ("qdrant", "grpc_port"), int),
+    ("AIGC_QDRANT_PREFER_GRPC", ("qdrant", "prefer_grpc"), bool),
     ("AIGC_LOGGING_LEVEL", ("logging", "level"), str),
     ("AIGC_LOGGING_FORMAT", ("logging", "format"), str),
     ("AIGC_LOGGING_FILE_ENABLED", ("logging", "file", "enabled"), bool),

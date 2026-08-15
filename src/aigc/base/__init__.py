@@ -5,6 +5,7 @@ from .config import (
     Config,
     LoggingConfig,
     LoggingFileConfig,
+    QdrantConfig,
     RedisConfig,
 )
 from .schema import (
@@ -23,5 +24,6 @@ __all__ = (
     "Config",
     "LoggingConfig",
     "LoggingFileConfig",
+    "QdrantConfig",
     "RedisConfig",
 )
