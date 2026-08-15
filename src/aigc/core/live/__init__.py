@@ -4,6 +4,7 @@ from .classification import (
     SemanticClassificationResultStruct,
 )
 from .enum import SemanticType
+from .handler import CommentWindowHandler
 from .schema import (
     CommentPayloadCreate,
     CommentPayloadStruct,
@@ -18,6 +19,7 @@ __all__ = (
     "CommentPayloadCreate",
     "CommentPayloadStruct",
     "CommentPayloadVO",
+    "CommentWindowHandler",
     "CommentWindowItemStruct",
     "CommentWindowItemVO",
     "CommentWindowStruct",
