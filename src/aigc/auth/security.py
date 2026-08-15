@@ -17,6 +17,11 @@ from .schema import UserStruct
 from .service import UserService
 
 SESSION_USER_ID_KEY = "user_id"
+SESSION_EXCLUDE_PATHS = (
+    r"^/system(?:/.*)?$",
+    "/docs",
+    "/openapi.json",
+)
 
 
 async def retrieve_user_handler(session: dict[str, Any], _: ASGIConnection) -> UserStruct | None:
@@ -48,15 +53,12 @@ def create_auth(config: AuthConfig | None = None) -> SessionAuth[UserStruct, Ser
         secure=auth_config.session_cookie_secure,
         httponly=auth_config.session_cookie_httponly,
         samesite=auth_config.session_cookie_samesite,
+        exclude=list(SESSION_EXCLUDE_PATHS),
         store=auth_config.session_store_name,
     )
 
     return SessionAuth[UserStruct, ServerSideSessionBackend](
         session_backend_config=session_backend_config,
         retrieve_user_handler=retrieve_user_handler,
-        exclude=[
-            r"^/system(?:/.*)?$",
-            "/docs",
-            "/openapi.json",
-        ],
+        exclude=list(SESSION_EXCLUDE_PATHS),
     )
