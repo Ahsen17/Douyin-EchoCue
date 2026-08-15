@@ -45,7 +45,7 @@ Tests should be limited to the minimum necessary scope and should prioritize key
 - Test-stage databases use temporary SQLite and must not connect to local or production databases.
 - Test-stage Redis uses memory mode and must not require a real Redis service.
 - API tests use Litestar's built-in test tools and do not start network services directly.
-- When testing controllers and dependency injection behavior, test cases are organized by tested behavior by default.
+- Test cases are organized by tested behavior by default. When test routes or views need to be defined, prefer CBV and use FBV only when CBV cannot cover the target.
 - Prefer real tables and data through SQLite fixtures when data can be constructed that way; mock only when stable construction is not possible.
 - Time-related tests use fixed times.
 - Random-value tests use fixed seeds or assert stable properties.
