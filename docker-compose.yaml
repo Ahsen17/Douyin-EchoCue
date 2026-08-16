@@ -43,14 +43,22 @@ services:
     volumes:
       - ./config/live.config.yaml:/app/config.yaml:ro
 
+  classifier:
+    build:
+      context: .
+    command: ["uv", "run", "app", "lexicon", "serve"]
+    expose:
+      - "50051"
+    depends_on:
+      qdrant:
+        condition: service_started
+    volumes:
+      - ./config/app.config.yaml:/app/config.yaml:ro
+      - ./assets:/app/assets:ro
+
   app:
     build:
       context: .
-    environment:
-      AIGC_APP_HOST: 0.0.0.0
-      AIGC_APP_PORT: 8000
-      AIGC_ALCHEMY_URL: postgresql+asyncpg://aigc:aigc@postgres:5432/aigc
-      AIGC_REDIS_DSN: redis://redis:6379/0
     ports:
       - "8000:8000"
     depends_on:
@@ -61,6 +69,8 @@ services:
       qdrant:
         condition: service_started
       live:
+        condition: service_started
+      classifier:
         condition: service_started
     volumes:
       - ./config/app.config.yaml:/app/config.yaml:ro

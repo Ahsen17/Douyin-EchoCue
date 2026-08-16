@@ -21,5 +21,13 @@ qdrant:
   grpc_port: 6334
   prefer_grpc: true
 
+classifier:
+  grpc_enabled: true
+  grpc_target: "classifier:50051"
+  grpc_timeout: 1.0
+  grpc_host: "0.0.0.0"
+  grpc_port: 50051
+  collection_name: "live_lexicon"
+
 alchemy:
   url: "postgresql+asyncpg://aigc:aigc@postgres:5432/aigc"

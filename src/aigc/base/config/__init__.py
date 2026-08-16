@@ -1,6 +1,7 @@
 from .alchemy import AlchemyConfig
 from .app import AppConfig
 from .auth import AuthConfig
+from .classifier import ClassifierConfig
 from .config import Config
 from .embedding import EmbeddingConfig
 from .logging import LoggingConfig, LoggingFileConfig
@@ -11,6 +12,7 @@ __all__ = (
     "AlchemyConfig",
     "AppConfig",
     "AuthConfig",
+    "ClassifierConfig",
     "Config",
     "EmbeddingConfig",
     "LoggingConfig",
