@@ -4,7 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
-from .classification import (
+from .classifier import (
     FakeSemanticClassificationClient,
     SemanticClassificationClient,
     SemanticClassificationRequestStruct,

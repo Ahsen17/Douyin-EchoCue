@@ -1,17 +1,17 @@
-from .classification import (
+from .classifier import (
     FakeSemanticClassificationClient,
+    GrpcSemanticClassificationClient,
+    LexiconRebuildResultStruct,
+    LexiconSampleStruct,
     QdrantSemanticClassificationClient,
     SemanticClassificationCandidateStruct,
     SemanticClassificationClient,
+    SemanticClassificationGrpcService,
     SemanticClassificationRequestStruct,
     SemanticClassificationResultStruct,
+    SemanticType,
 )
-from .enum import SemanticType
 from .handler import CommentWindowHandler
-from .lexicon import (
-    LexiconRebuildResultStruct,
-    LexiconSampleStruct,
-)
 from .schema import (
     CommentPayloadCreate,
     CommentPayloadStruct,
@@ -39,6 +39,7 @@ __all__ = (
     "CommentWindowVO",
     "DouyinLiveCommentSource",
     "FakeSemanticClassificationClient",
+    "GrpcSemanticClassificationClient",
     "LexiconRebuildResultStruct",
     "LexiconSampleStruct",
     "LiveCommentEventCreate",
@@ -47,6 +48,7 @@ __all__ = (
     "QdrantSemanticClassificationClient",
     "SemanticClassificationCandidateStruct",
     "SemanticClassificationClient",
+    "SemanticClassificationGrpcService",
     "SemanticClassificationRequestStruct",
     "SemanticClassificationResultStruct",
     "SemanticType",

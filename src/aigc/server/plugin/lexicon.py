@@ -9,10 +9,12 @@ from litestar.plugins import CLIPluginProtocol
 
 from aigc.base import Config
 from aigc.base.config.constants import BASE_DIR
-from aigc.core.live.lexicon import (
+from aigc.core.live.classifier import QdrantSemanticClassificationClient
+from aigc.core.live.classifier.lexicon import (
     DEFAULT_LEXICON_COLLECTION_NAME,
     rebuild_lexicon_collection,
 )
+from aigc.core.live.classifier.rpc import create_live_classification_grpc_server
 from aigc.lib import QdrantClientFactory
 
 if TYPE_CHECKING:
@@ -52,6 +54,38 @@ def rebuild_lexicon(samples_file: Path, collection_name: str) -> None:
         )
         await client.close()
         click.echo(f"Rebuilt {result.collection_name} with {result.sample_count} lexicon samples.")
+
+    asyncio.run(run())
+
+
+@lexicon_group.command(name="serve")
+@click.option("--host", default="127.0.0.1", show_default=True, help="gRPC bind host.")
+@click.option("--port", default=50051, show_default=True, type=int, help="gRPC bind port.")
+@click.option(
+    "--collection-name",
+    default=DEFAULT_LEXICON_COLLECTION_NAME,
+    show_default=True,
+    help="Qdrant collection name used for sparse lexicon retrieval.",
+)
+def serve_lexicon(host: str, port: int, collection_name: str) -> None:
+    """Serve live lexicon classification over gRPC."""
+
+    async def run() -> None:
+        qdrant_client = QdrantClientFactory(Config.get().qdrant).new()
+        classification_client = QdrantSemanticClassificationClient(
+            qdrant_client,
+            collection_name=collection_name,
+        )
+        server = create_live_classification_grpc_server(classification_client)
+        bind_address = f"{host}:{port}"
+        server.add_insecure_port(bind_address)
+        await server.start()
+        click.echo(f"Serving live lexicon classification gRPC on {bind_address}.")
+        try:
+            await server.wait_for_termination()
+        finally:
+            await server.stop(grace=1)
+            await qdrant_client.close()
 
     asyncio.run(run())
 

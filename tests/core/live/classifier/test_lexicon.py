@@ -3,8 +3,8 @@ from uuid import UUID
 
 from qdrant_client import AsyncQdrantClient
 
-from aigc.core.live import SemanticType
-from aigc.core.live.lexicon import load_lexicon_samples, rebuild_lexicon_collection
+from aigc.core.live.classifier import SemanticType
+from aigc.core.live.classifier.lexicon import load_lexicon_samples, rebuild_lexicon_collection
 
 
 def test_load_lexicon_samples_decodes_jsonl(tmp_path: Path) -> None:

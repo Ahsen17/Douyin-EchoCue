@@ -2,12 +2,12 @@ from pathlib import Path
 
 from qdrant_client import AsyncQdrantClient
 
-from aigc.core.live import (
+from aigc.core.live.classifier import (
     QdrantSemanticClassificationClient,
     SemanticClassificationRequestStruct,
     SemanticType,
 )
-from aigc.core.live.lexicon import rebuild_lexicon_collection
+from aigc.core.live.classifier.lexicon import rebuild_lexicon_collection
 
 
 async def test_qdrant_semantic_classification_client_classifies_by_sparse_lexicon(tmp_path: Path) -> None:

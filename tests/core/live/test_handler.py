@@ -10,7 +10,7 @@ from aigc.core.live import (
     QdrantSemanticClassificationClient,
     SemanticType,
 )
-from aigc.core.live.lexicon import rebuild_lexicon_collection
+from aigc.core.live.classifier.lexicon import rebuild_lexicon_collection
 
 
 def _comment_event(

@@ -9,7 +9,7 @@ from datetime import datetime
 from aigc.base import BaseStruct, CamelizedBaseStruct
 
 from ._conversion import convert_struct
-from .enum import SemanticType
+from .classifier import SemanticType
 
 __all__ = (
     "CommentWindowItemStruct",
