@@ -1,14 +1,14 @@
 """Lexicon rebuilding for live comment classification."""
 
-from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Protocol
 
 from msgspec import DecodeError, ValidationError, json
-from qdrant_client.models import Modifier, PointStruct, SparseVector, SparseVectorParams
+from qdrant_client import AsyncQdrantClient
+from qdrant_client.models import PointStruct, SparseVector
 from uuid_utils.compat import uuid7
 
 from aigc.base import BaseStruct
+from aigc.lib import QdrantCollectionCreator
 from aigc.shared.embedder import Bm25SparseEmbedder
 
 from .enum import SemanticType
@@ -16,7 +16,6 @@ from .enum import SemanticType
 __all__ = (
     "LexiconRebuildResultStruct",
     "LexiconSampleStruct",
-    "SemanticQdrantClient",
 )
 
 
@@ -39,27 +38,6 @@ class LexiconRebuildResultStruct(BaseStruct):
     sample_count: int
 
 
-class SemanticQdrantClient(Protocol):
-    """Qdrant operations required by lexicon rebuilding."""
-
-    async def collection_exists(self, collection_name: str, **kwargs: object) -> bool:
-        """Return whether a collection exists."""
-
-    async def delete_collection(self, collection_name: str, **kwargs: object) -> bool:
-        """Delete an existing collection."""
-
-    async def create_collection(
-        self,
-        collection_name: str,
-        sparse_vectors_config: Mapping[str, SparseVectorParams] | None = None,
-        **kwargs: object,
-    ) -> bool:
-        """Create a collection."""
-
-    async def upsert(self, collection_name: str, points: Sequence[PointStruct], **kwargs: object) -> object:
-        """Upsert points into a collection."""
-
-
 def load_lexicon_samples(samples_file: Path) -> list[LexiconSampleStruct]:
     """Load lexicon samples from a JSONL file."""
 
@@ -79,7 +57,7 @@ def load_lexicon_samples(samples_file: Path) -> list[LexiconSampleStruct]:
 
 
 async def rebuild_lexicon_collection(
-    client: SemanticQdrantClient,
+    client: AsyncQdrantClient,
     *,
     samples_file: Path,
     collection_name: str = DEFAULT_LEXICON_COLLECTION_NAME,
@@ -90,17 +68,14 @@ async def rebuild_lexicon_collection(
     samples = load_lexicon_samples(samples_file)
     embedder = embedder or Bm25SparseEmbedder(avg_len=_average_text_length(samples))
     vectors = embedder.embed([sample.text for sample in samples])
-    points = [
-        _sample_to_point(sample, vector, index)
-        for index, (sample, vector) in enumerate(zip(samples, vectors, strict=True))
-    ]
+    points = [_sample_to_point(sample, vector) for sample, vector in zip(samples, vectors, strict=True)]
 
     if await client.collection_exists(collection_name):
         await client.delete_collection(collection_name=collection_name)
 
-    await client.create_collection(
+    await QdrantCollectionCreator(client).create(
         collection_name=collection_name,
-        sparse_vectors_config={"sparse": SparseVectorParams(modifier=Modifier.IDF)},
+        vector_type="sparse",
     )
     if points:
         await client.upsert(collection_name=collection_name, points=points, wait=True)
@@ -108,7 +83,7 @@ async def rebuild_lexicon_collection(
     return LexiconRebuildResultStruct(collection_name=collection_name, sample_count=len(samples))
 
 
-def _sample_to_point(sample: LexiconSampleStruct, vector: SparseVector, index: int) -> PointStruct:
+def _sample_to_point(sample: LexiconSampleStruct, vector: SparseVector) -> PointStruct:
     return PointStruct(
         id=uuid7(),
         vector={"sparse": vector},

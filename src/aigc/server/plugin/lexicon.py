@@ -2,7 +2,7 @@
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import rich_click as click
 from litestar.plugins import CLIPluginProtocol
@@ -17,8 +17,6 @@ from aigc.lib import QdrantClientFactory
 
 if TYPE_CHECKING:
     from click import Group
-
-    from aigc.core.live import SemanticQdrantClient
 
 __all__ = ("LexiconPlugin",)
 
@@ -48,7 +46,7 @@ def rebuild_lexicon(samples_file: Path, collection_name: str) -> None:
     async def run() -> None:
         client = QdrantClientFactory(Config.get().qdrant).new()
         result = await rebuild_lexicon_collection(
-            cast("SemanticQdrantClient", client),
+            client,
             samples_file=samples_file,
             collection_name=collection_name,
         )

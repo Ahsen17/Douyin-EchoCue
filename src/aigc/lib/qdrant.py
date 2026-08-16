@@ -91,26 +91,6 @@ class QdrantCollectionCreator:
         sparse: bool | None = None,
     ) -> bool:
 
-        config_cache = {
-            "dense": VectorParams(
-                size=dense_size,  # type: ignore
-                distance=Distance.COSINE,
-                on_disk=True,
-            ),
-            "dense_mrl": VectorParams(
-                size=mrl_dense_size,  # type: ignore
-                distance=Distance.COSINE,
-                quantization_config=ScalarQuantization(
-                    scalar=ScalarQuantizationConfig(
-                        type=ScalarType.INT8,
-                        quantile=0.99,
-                    )
-                ),
-                on_disk=True,
-            ),
-            "sparse": SparseVectorParams(modifier=Modifier.IDF),
-        }
-
         match vector_type:
             case "default":
                 if dense_size is None:
@@ -118,13 +98,17 @@ class QdrantCollectionCreator:
 
                 return await self._client.create_collection(
                     collection_name=collection_name,
-                    vectors_config=config_cache["dense"],
+                    vectors_config=VectorParams(
+                        size=dense_size,
+                        distance=Distance.COSINE,
+                        on_disk=True,
+                    ),
                 )
 
             case "sparse":
                 return await self._client.create_collection(
                     collection_name=collection_name,
-                    sparse_vectors_config={"sparse": config_cache["sparse"]},
+                    sparse_vectors_config={"sparse": SparseVectorParams(modifier=Modifier.IDF)},
                 )
 
             case "hybrid":
@@ -133,12 +117,18 @@ class QdrantCollectionCreator:
 
                 return await self._client.create_collection(
                     collection_name=collection_name,
-                    vectors_config=config_cache["dense"],
-                    sparse_vectors_config={"sparse": config_cache["sparse"]},
+                    vectors_config={
+                        "dense": VectorParams(
+                            size=dense_size,
+                            distance=Distance.COSINE,
+                            on_disk=True,
+                        )
+                    },
+                    sparse_vectors_config={"sparse": SparseVectorParams(modifier=Modifier.IDF)},
                 )
 
             case "multi":
-                if not all((dense_size, mrl_dense_size, sparse is not None)):
+                if dense_size is None or mrl_dense_size is None or sparse is None:
                     raise ValueError(
                         "dense_size, mrl_dense_size, and sparse must be specified for multi collections",
                     )
@@ -149,8 +139,26 @@ class QdrantCollectionCreator:
                 return await self._client.create_collection(
                     collection_name=collection_name,
                     vectors_config={
-                        "dense_full": config_cache["dense"],
-                        "dense_mrl": config_cache["dense_mrl"],
+                        "dense_full": VectorParams(
+                            size=dense_size,
+                            distance=Distance.COSINE,
+                            on_disk=True,
+                        ),
+                        "dense_mrl": VectorParams(
+                            size=mrl_dense_size,
+                            distance=Distance.COSINE,
+                            quantization_config=ScalarQuantization(
+                                scalar=ScalarQuantizationConfig(
+                                    type=ScalarType.INT8,
+                                    quantile=0.99,
+                                )
+                            ),
+                            on_disk=True,
+                        ),
                     },
-                    sparse_vectors_config={"sparse": config_cache["sparse"]} if sparse else None,
+                    sparse_vectors_config={
+                        "sparse": SparseVectorParams(modifier=Modifier.IDF),
+                    }
+                    if sparse
+                    else None,
                 )

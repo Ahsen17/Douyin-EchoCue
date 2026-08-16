@@ -1,5 +1,6 @@
 from .classification import (
     FakeSemanticClassificationClient,
+    QdrantSemanticClassificationClient,
     SemanticClassificationCandidateStruct,
     SemanticClassificationClient,
     SemanticClassificationRequestStruct,
@@ -10,7 +11,6 @@ from .handler import CommentWindowHandler
 from .lexicon import (
     LexiconRebuildResultStruct,
     LexiconSampleStruct,
-    SemanticQdrantClient,
 )
 from .schema import (
     CommentPayloadCreate,
@@ -44,10 +44,10 @@ __all__ = (
     "LiveCommentEventCreate",
     "LiveCommentEventStruct",
     "LiveCommentEventVO",
+    "QdrantSemanticClassificationClient",
     "SemanticClassificationCandidateStruct",
     "SemanticClassificationClient",
     "SemanticClassificationRequestStruct",
     "SemanticClassificationResultStruct",
-    "SemanticQdrantClient",
     "SemanticType",
 )
