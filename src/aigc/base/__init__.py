@@ -2,9 +2,12 @@ from .config import (
     AlchemyConfig,
     AppConfig,
     AuthConfig,
+    ClassifierConfig,
     Config,
+    EmbeddingConfig,
     LoggingConfig,
     LoggingFileConfig,
+    QdrantConfig,
     RedisConfig,
 )
 from .schema import (
@@ -20,8 +23,11 @@ __all__ = (
     "BaseModel",
     "BaseStruct",
     "CamelizedBaseStruct",
+    "ClassifierConfig",
     "Config",
+    "EmbeddingConfig",
     "LoggingConfig",
     "LoggingFileConfig",
+    "QdrantConfig",
     "RedisConfig",
 )

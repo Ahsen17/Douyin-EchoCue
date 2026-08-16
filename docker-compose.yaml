@@ -3,32 +3,80 @@ services:
     image: postgres:17
     environment:
       POSTGRES_DB: aigc
-      POSTGRES_USER: ahsen
-      POSTGRES_PASSWORD: ahsen
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: aigc
+      POSTGRES_PASSWORD: aigc
+    expose:
+      - "5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ahsen -d aigc"]
+      test: ["CMD-SHELL", "pg_isready -U aigc -d aigc"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7.2-alpine
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    expose:
+      - "6333"
+      - "6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+  live:
+    image: ghcr.io/jwwsjlm/douyinlive:v2.0.25
+    command: ["--config", "/app/config.yaml"]
+    expose:
+      - "1088"
+    volumes:
+      - ./config/live.config.yaml:/app/config.yaml:ro
+
+  classifier:
+    image: aigc-app:0.1.0
+    command: ["uv", "run", "app", "lexicon", "serve"]
+    expose:
+      - "50051"
+    depends_on:
+      qdrant:
+        condition: service_started
+    volumes:
+      - ./config/app.config.yaml:/app/config.yaml:ro
+      - ./assets:/app/assets:ro
+
   app:
+    image: aigc-app:0.1.0
     build:
       context: .
-    environment:
-      AIGC_APP_HOST: 0.0.0.0
-      AIGC_APP_PORT: 8000
-      AIGC_ALCHEMY_URL: postgresql+asyncpg://ahsen:ahsen@postgres:5432/aigc
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      live:
+        condition: service_started
+      classifier:
+        condition: service_started
     volumes:
+      - ./config/app.config.yaml:/app/config.yaml:ro
       - ./logs:/app/logs
 
 volumes:
   postgres-data:
+  redis-data:
+  qdrant-data:

@@ -1,0 +1,16 @@
+{"id":"price_promotion_000001","semantic_type":"price_promotion","text":"这个多少钱，有没有优惠券","description":"用户询问商品价格和优惠信息。"}
+{"id":"price_promotion_000002","semantic_type":"price_promotion","text":"今天拍下到手价是多少","description":"用户询问最终成交价格。"}
+{"id":"specification_000001","semantic_type":"specification","text":"这个有几个颜色，尺码怎么选","description":"用户询问颜色和尺码规格。"}
+{"id":"specification_000002","semantic_type":"specification","text":"容量是多少，适合多大空间","description":"用户询问容量和规格参数。"}
+{"id":"stock_000001","semantic_type":"stock","text":"这个颜色还有库存吗","description":"用户询问库存状态。"}
+{"id":"stock_000002","semantic_type":"stock","text":"卖完了还会补货吗","description":"用户询问缺货后的补货安排。"}
+{"id":"logistics_000001","semantic_type":"logistics","text":"今天下单什么时候发货","description":"用户询问发货时间。"}
+{"id":"logistics_000002","semantic_type":"logistics","text":"偏远地区包邮吗，快递几天到","description":"用户询问运费和配送时效。"}
+{"id":"after_sale_000001","semantic_type":"after_sale","text":"不合适可以退换吗","description":"用户询问退换货政策。"}
+{"id":"after_sale_000002","semantic_type":"after_sale","text":"质量有问题怎么售后","description":"用户询问质量问题和售后保障。"}
+{"id":"selling_point_000001","semantic_type":"selling_point","text":"这个材质有什么优势","description":"用户询问商品卖点。"}
+{"id":"selling_point_000002","semantic_type":"selling_point","text":"主要效果是什么，好不好用","description":"用户询问商品效果和使用价值。"}
+{"id":"audience_scenario_000001","semantic_type":"audience_scenario","text":"敏感肌可以用吗","description":"用户询问特定人群适用性。"}
+{"id":"audience_scenario_000002","semantic_type":"audience_scenario","text":"送老人合适吗","description":"用户询问使用场景和适配人群。"}
+{"id":"general_interaction_000001","semantic_type":"general_interaction","text":"主播看一下这款","description":"用户进行一般直播互动。"}
+{"id":"general_interaction_000002","semantic_type":"general_interaction","text":"我已经关注下单了","description":"用户表达互动和购买动作。"}

@@ -7,11 +7,19 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 COPY pyproject.toml uv.lock README.md ./
-COPY config.yaml ./config.yaml
+COPY config/app.config.yaml ./config.yaml
 COPY src ./src
 
 RUN uv sync --frozen --no-dev
 
-EXPOSE 8000
+EXPOSE 8000 50051
 
+# 默认启动 app 服务。Classifier 微服务也复用同一镜像，可通过项目 CLI 启动。
+# Start the app service by default. The Classifier service can reuse the same image and be started via the project CLI.
+
+# App example:
+#   docker run --rm -p 8000:8000 -v "$PWD/config/app.config.yaml:/app/config.yaml:ro" aigc-app:0.1.0
+# Classifier example:
+#   docker run --rm -p 50051:50051 -v "$PWD/config/app.config.yaml:/app/config.yaml:ro" \
+#     -v "$PWD/assets:/app/assets:ro" aigc-app:0.1.0 uv run app lexicon serve
 CMD ["uv", "run", "app", "run", "--host", "0.0.0.0", "--port", "8000"]

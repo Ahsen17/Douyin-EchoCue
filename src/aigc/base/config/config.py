@@ -8,8 +8,11 @@ from aigc.base.schema import BaseStruct
 from .alchemy import AlchemyConfig
 from .app import AppConfig
 from .auth import AuthConfig
+from .classifier import ClassifierConfig
 from .constants import BASE_DIR
+from .embedding import EmbeddingConfig
 from .logging import LoggingConfig
+from .qdrant import QdrantConfig
 from .redis import RedisConfig
 
 __all__ = ("Config",)
@@ -23,8 +26,12 @@ class Config(BaseStruct):
     app: AppConfig = field(default_factory=AppConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     redis: RedisConfig = field(default_factory=RedisConfig)
+    qdrant: QdrantConfig = field(default_factory=QdrantConfig)
     alchemy: AlchemyConfig = field(default_factory=AlchemyConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
+    classifier: ClassifierConfig = field(default_factory=ClassifierConfig)
+
+    embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
 
     @classmethod
     def get(cls, filename: str = "config.yaml") -> Self:
@@ -90,6 +97,13 @@ def _parse_env_value(env_name: str, raw_value: str, value_type: type[Any]) -> ob
             msg = f"Invalid integer value for {env_name}: {raw_value!r}"
             raise ValueError(msg) from exc
 
+    if value_type is float:
+        try:
+            return float(raw_value)
+        except ValueError as exc:
+            msg = f"Invalid float value for {env_name}: {raw_value!r}"
+            raise ValueError(msg) from exc
+
     return raw_value
 
 
@@ -101,6 +115,16 @@ _ENV_OVERRIDES: tuple[tuple[str, tuple[str, ...], type[Any]], ...] = (
     ("AIGC_ALCHEMY_ECHO", ("alchemy", "echo"), bool),
     ("AIGC_ALCHEMY_POOL_DISABLED", ("alchemy", "pool_disabled"), bool),
     ("AIGC_REDIS_DSN", ("redis", "dsn"), str),
+    ("AIGC_QDRANT_HOST", ("qdrant", "host"), str),
+    ("AIGC_QDRANT_PORT", ("qdrant", "port"), int),
+    ("AIGC_QDRANT_GRPC_PORT", ("qdrant", "grpc_port"), int),
+    ("AIGC_QDRANT_PREFER_GRPC", ("qdrant", "prefer_grpc"), bool),
+    ("AIGC_CLASSIFIER_GRPC_ENABLED", ("classifier", "grpc_enabled"), bool),
+    ("AIGC_CLASSIFIER_GRPC_TARGET", ("classifier", "grpc_target"), str),
+    ("AIGC_CLASSIFIER_GRPC_TIMEOUT", ("classifier", "grpc_timeout"), float),
+    ("AIGC_CLASSIFIER_GRPC_HOST", ("classifier", "grpc_host"), str),
+    ("AIGC_CLASSIFIER_GRPC_PORT", ("classifier", "grpc_port"), int),
+    ("AIGC_CLASSIFIER_COLLECTION_NAME", ("classifier", "collection_name"), str),
     ("AIGC_LOGGING_LEVEL", ("logging", "level"), str),
     ("AIGC_LOGGING_FORMAT", ("logging", "format"), str),
     ("AIGC_LOGGING_FILE_ENABLED", ("logging", "file", "enabled"), bool),

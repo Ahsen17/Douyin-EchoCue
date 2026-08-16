@@ -1,0 +1,33 @@
+app:
+  host: "0.0.0.0"
+  port: 8000
+
+logging:
+  level: "INFO"
+  format: "console"
+  file:
+    enabled: true
+    path: "logs/app.log"
+
+redis:
+  dsn: "redis://redis:6379/0"
+  pool_enabled: true
+  pool_size: 50
+  connection_timeout: 10
+
+qdrant:
+  host: "qdrant"
+  port: 6333
+  grpc_port: 6334
+  prefer_grpc: true
+
+classifier:
+  grpc_enabled: true
+  grpc_target: "classifier:50051"
+  grpc_timeout: 1.0
+  grpc_host: "0.0.0.0"
+  grpc_port: 50051
+  collection_name: "live_lexicon"
+
+alchemy:
+  url: "postgresql+asyncpg://aigc:aigc@postgres:5432/aigc"
