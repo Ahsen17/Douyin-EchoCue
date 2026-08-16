@@ -88,8 +88,8 @@ class Bm25SparseEmbedder:
 
         return [
             SparseVector(
-                indices=embedding.indices,
-                values=embedding.values,
+                indices=embedding.indices.tolist(),
+                values=embedding.values.tolist(),
             )
             for embedding in self._bm25.embed(documents=content)
         ]
@@ -99,8 +99,8 @@ class Bm25SparseEmbedder:
 
         return [
             SparseVector(
-                index=embedding.index,
-                values=embedding.values,
+                indices=embedding.indices.tolist(),
+                values=embedding.values.tolist(),
             )
             for embedding in self._bm25.query_embed(query=query)
         ]

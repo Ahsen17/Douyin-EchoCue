@@ -4,6 +4,7 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
     Distance,
     Modifier,
+    ScalarQuantization,
     ScalarQuantizationConfig,
     ScalarType,
     SparseVectorParams,
@@ -99,9 +100,11 @@ class QdrantCollectionCreator:
             "dense_mrl": VectorParams(
                 size=mrl_dense_size,  # type: ignore
                 distance=Distance.COSINE,
-                quantization_config=ScalarQuantizationConfig(
-                    type=ScalarType.INT8,
-                    quantile=0.99,
+                quantization_config=ScalarQuantization(
+                    scalar=ScalarQuantizationConfig(
+                        type=ScalarType.INT8,
+                        quantile=0.99,
+                    )
                 ),
                 on_disk=True,
             ),

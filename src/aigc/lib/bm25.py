@@ -50,6 +50,7 @@ class Bm25Chinese(Bm25):
         self.language = language
         self.token_max_length = token_max_length
         self._specific_model_path = specific_model_path
+        self._local_files_only = kwargs.get("local_files_only", False)
 
         self._model_dir = Path()
 
