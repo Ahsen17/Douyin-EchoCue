@@ -16,6 +16,7 @@ dependencies = [
     "autogen-ext[openai]",
     "autogen-agentchat",
     "fastembed",
+    "grpcio-tools",
     "jieba",
     "litestar[jwt,jinja,sqlalchemy,structlog]",
     "msgspec",
@@ -147,6 +148,8 @@ max-complexity = 12
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401"]
 "src/aigc/db/migrations/versions/*.py" = ["N999"]
+"src/aigc/core/lexicon/proto/*_pb2.py" = ["ALL"]
+"src/aigc/core/lexicon/proto/*_pb2_grpc.py" = ["ALL"]
 "**/{tests,docs,tools}/*" = ["E402"]
 "docs/**/*.*" = ["S", "B", "DTZ", "A", "TC", "ERA", "D", "RET"]
 "tests/**/*.*" = [
@@ -200,6 +203,10 @@ enable_error_code = [
 ]
 show_error_codes = true
 pretty = true
+
+[[tool.mypy.overrides]]
+module = ["aigc.core.lexicon.proto.*"]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib", "--asyncio-mode=auto"]

@@ -1,16 +1,23 @@
 from datetime import UTC, datetime
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import pytest
 
 from aigc.core.lexicon import (
     FakeSemanticClassificationClient,
     GrpcSemanticClassificationClient,
+    SemanticClassificationCommentStruct,
     SemanticClassificationRequestStruct,
     SemanticType,
 )
-from aigc.core.lexicon.rpc import create_live_classification_grpc_server
+from aigc.core.lexicon.proto import semantic_classification_pb2
+from aigc.core.lexicon.rpc import SemanticClassificationGrpcService, create_live_classification_grpc_server
 from aigc.core.live import CommentPayloadStruct, CommentWindowHandler, LiveCommentEventStruct
+
+
+class FakeGrpcContext:
+    async def abort(self, code: object, details: str) -> None:
+        raise RuntimeError(details)
 
 
 class TestSemanticClassificationGrpc:
@@ -20,7 +27,7 @@ class TestSemanticClassificationGrpc:
     def set_up(self) -> None:
         self.classification_client = FakeSemanticClassificationClient()
 
-    def patch_fake_channel(self, mocker: Any, *, assert_method: bool = False) -> None:
+    def patch_generated_stub_channel(self, mocker: Any, *, assert_method: bool = False) -> None:
         classification_client = self.classification_client
 
         class FakeUnaryUnaryCall:
@@ -28,12 +35,19 @@ class TestSemanticClassificationGrpc:
                 self._request_serializer = request_serializer
                 self._response_deserializer = response_deserializer
 
-            async def __call__(self, request: SemanticClassificationRequestStruct, *, timeout: float) -> Any:
-                decoded_request = SemanticClassificationRequestStruct.from_json(
-                    self._request_serializer(request).decode(),
+            async def __call__(
+                self,
+                request: Any,
+                *,
+                timeout: float,
+            ) -> Any:
+                proto = cast("Any", semantic_classification_pb2)
+                decoded_request = proto.SemanticClassificationRequest.FromString(
+                    self._request_serializer(request),
                 )
-                result = await classification_client.classify(decoded_request)
-                return self._response_deserializer(result.to_jsonb())
+                service = SemanticClassificationGrpcService(classification_client)
+                encoded_result = await service.Classify(decoded_request, FakeGrpcContext())
+                return self._response_deserializer(encoded_result.SerializeToString())
 
         class FakeChannel:
             async def __aenter__(self) -> Self:
@@ -43,7 +57,12 @@ class TestSemanticClassificationGrpc:
                 return None
 
             def unary_unary(
-                self, method: str, *, request_serializer: Any, response_deserializer: Any
+                self,
+                method: str,
+                *,
+                request_serializer: Any,
+                response_deserializer: Any,
+                **kwargs: Any,
             ) -> FakeUnaryUnaryCall:
                 if assert_method:
                     assert method == "/aigc.lexicon.SemanticClassification/Classify"
@@ -52,8 +71,8 @@ class TestSemanticClassificationGrpc:
 
         mocker.patch("aigc.core.lexicon.rpc.grpc.aio.insecure_channel", return_value=FakeChannel())
 
-    async def test_client_classifies_through_channel(self, mocker: Any) -> None:
-        self.patch_fake_channel(mocker, assert_method=True)
+    async def test_client_classifies_through_generated_stub(self, mocker: Any) -> None:
+        self.patch_generated_stub_channel(mocker, assert_method=True)
         client = GrpcSemanticClassificationClient("127.0.0.1:50051")
 
         result = await client.classify(
@@ -64,8 +83,31 @@ class TestSemanticClassificationGrpc:
         assert result.confidence > 0
         assert result.candidates[0].semantic_type is SemanticType.PERSONA_PRAISE
 
+    async def test_client_preserves_comment_candidates_through_proto(self, mocker: Any) -> None:
+        self.patch_generated_stub_channel(mocker)
+        client = GrpcSemanticClassificationClient("127.0.0.1:50051")
+
+        result = await client.classify(
+            SemanticClassificationRequestStruct(
+                room_id="room-a",
+                text_batch=["主播今天状态太好了", "笑死这个反差太有梗了"],
+                top_n=2,
+                comment_batch=[
+                    SemanticClassificationCommentStruct(comment_id="comment-1", text="主播今天状态太好了"),
+                    SemanticClassificationCommentStruct(comment_id="comment-2", text="笑死这个反差太有梗了"),
+                ],
+            )
+        )
+
+        assert result.top_n == 2
+        assert {candidate.comment_id for candidate in result.candidates} == {"comment-1", "comment-2"}
+        assert {candidate.semantic_type for candidate in result.candidates} == {
+            SemanticType.PERSONA_PRAISE,
+            SemanticType.PLAYFUL_JOKE,
+        }
+
     async def test_comment_window_handler_uses_injected_client(self, mocker: Any) -> None:
-        self.patch_fake_channel(mocker)
+        self.patch_generated_stub_channel(mocker)
         handler = CommentWindowHandler(classification_client=GrpcSemanticClassificationClient("127.0.0.1:50051"))
 
         window = await handler.ingest_comment(
@@ -90,14 +132,15 @@ class TestSemanticClassificationGrpc:
         client = GrpcSemanticClassificationClient("127.0.0.1:1", timeout=0.1)
 
         result = await client.classify(
-            SemanticClassificationRequestStruct(room_id="room-a", text_batch=["主播今天状态太好了"])
+            SemanticClassificationRequestStruct(room_id="room-a", text_batch=["主播今天状态太好了"], top_n=3)
         )
 
         assert result.semantic_type is SemanticType.OTHER
         assert result.confidence == 0
+        assert result.top_n == 3
         assert result.candidates == []
 
-    async def test_create_server_returns_server(self) -> None:
+    async def test_create_server_returns_generated_grpc_server(self) -> None:
         server = create_live_classification_grpc_server(self.classification_client)
 
         assert server is not None

@@ -1,29 +1,39 @@
 """gRPC transport for lexicon semantic classification."""
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast, override
 
 import grpc  # type: ignore[import-untyped]
-from msgspec import DecodeError, ValidationError, json
 
 from .classification import (
+    SemanticClassificationCandidateStruct,
     SemanticClassificationClient,
+    SemanticClassificationCommentStruct,
     SemanticClassificationRequestStruct,
     SemanticClassificationResultStruct,
 )
+from .enum import SemanticType
+from .proto import semantic_classification_pb2, semantic_classification_pb2_grpc
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-
     from grpc import aio
 
 __all__ = (
     "GrpcSemanticClassificationClient",
     "SemanticClassificationGrpcService",
+    "create_live_classification_grpc_server",
 )
 
 
-LIVE_CLASSIFICATION_GRPC_SERVICE = "aigc.lexicon.SemanticClassification"
-LIVE_CLASSIFICATION_GRPC_METHOD = f"/{LIVE_CLASSIFICATION_GRPC_SERVICE}/Classify"
+_SEMANTIC_TYPE_TO_PROTO: dict[SemanticType, int] = {
+    SemanticType.PLAYFUL_JOKE: cast("int", cast("Any", semantic_classification_pb2).SEMANTIC_TYPE_PLAYFUL_JOKE),
+    SemanticType.PERSONA_PRAISE: cast("int", cast("Any", semantic_classification_pb2).SEMANTIC_TYPE_PERSONA_PRAISE),
+    SemanticType.INTERACTIVE_PROMPT: cast("int", cast("Any", semantic_classification_pb2).SEMANTIC_TYPE_INTERACTIVE_PROMPT),
+    SemanticType.ATMOSPHERE_BOOST: cast("int", cast("Any", semantic_classification_pb2).SEMANTIC_TYPE_ATMOSPHERE_BOOST),
+    SemanticType.OTHER: cast("int", cast("Any", semantic_classification_pb2).SEMANTIC_TYPE_OTHER),
+}
+_PROTO_TO_SEMANTIC_TYPE: dict[int, SemanticType] = {
+    proto_value: semantic_type for semantic_type, proto_value in _SEMANTIC_TYPE_TO_PROTO.items()
+}
 
 
 class GrpcSemanticClassificationClient:
@@ -38,34 +48,35 @@ class GrpcSemanticClassificationClient:
 
         try:
             async with grpc.aio.insecure_channel(self._target) as channel:
-                classify = channel.unary_unary(
-                    LIVE_CLASSIFICATION_GRPC_METHOD,
-                    request_serializer=_serialize_classification_request,
-                    response_deserializer=_deserialize_classification_result,
-                )
-                return cast("SemanticClassificationResultStruct", await classify(request, timeout=self._timeout))
+                stub = cast("Any", semantic_classification_pb2_grpc.SemanticClassificationStub)(channel)
+                response = await stub.Classify(_request_to_proto(request), timeout=self._timeout)
         except Exception:  # noqa: BLE001
-            return SemanticClassificationResultStruct.other()
+            return SemanticClassificationResultStruct.other(top_n=request.top_n)
+
+        return _result_from_proto(response)
 
 
-class SemanticClassificationGrpcService:
+class SemanticClassificationGrpcService(semantic_classification_pb2_grpc.SemanticClassificationServicer):
     """gRPC service adapter for a semantic classification client."""
 
     def __init__(self, classification_client: SemanticClassificationClient) -> None:
         self._classification_client = classification_client
 
-    async def classify(
+    @override
+    async def Classify(
         self,
-        request: SemanticClassificationRequestStruct,
-        context: "grpc.aio.ServicerContext[bytes, bytes]",
-    ) -> SemanticClassificationResultStruct:
+        request: Any,
+        context: "grpc.aio.ServicerContext[Any, Any]",
+    ) -> Any:
         """Classify a decoded gRPC request."""
 
         try:
-            return await self._classification_client.classify(request)
+            result = await self._classification_client.classify(_request_from_proto(request))
         except Exception as exc:
             await context.abort(grpc.StatusCode.INTERNAL, str(exc))
             raise RuntimeError("unreachable") from exc
+
+        return _result_to_proto(result)
 
 
 def create_live_classification_grpc_server(
@@ -74,45 +85,88 @@ def create_live_classification_grpc_server(
     """Create a gRPC server for live semantic classification."""
 
     server = grpc.aio.server()
-    service = SemanticClassificationGrpcService(classification_client)
-    handler = grpc.unary_unary_rpc_method_handler(
-        _wrap_rpc_method(service.classify),
-        request_deserializer=_deserialize_classification_request,
-        response_serializer=_serialize_classification_result,
+    semantic_classification_pb2_grpc.add_SemanticClassificationServicer_to_server(  # type: ignore[no-untyped-call]
+        SemanticClassificationGrpcService(classification_client),
+        server,
     )
-    generic_handler = grpc.method_handlers_generic_handler(
-        LIVE_CLASSIFICATION_GRPC_SERVICE,
-        {"Classify": handler},
-    )
-    server.add_generic_rpc_handlers((generic_handler,))
     return server
 
 
-def _wrap_rpc_method(
-    method: "Callable[[SemanticClassificationRequestStruct, grpc.aio.ServicerContext[bytes, bytes]], Awaitable[SemanticClassificationResultStruct]]",
-) -> "Callable[[SemanticClassificationRequestStruct, grpc.aio.ServicerContext[bytes, bytes]], Awaitable[SemanticClassificationResultStruct]]":
-    return method
+def _request_to_proto(
+    request: SemanticClassificationRequestStruct,
+) -> Any:
+    proto = cast("Any", semantic_classification_pb2)
+    return proto.SemanticClassificationRequest(
+        room_id=request.room_id,
+        text_batch=request.text_batch,
+        top_n=request.top_n,
+        comment_batch=[
+            proto.SemanticClassificationComment(
+                comment_id=comment.comment_id,
+                text=comment.text,
+            )
+            for comment in request.comment_batch
+        ],
+    )
 
 
-def _serialize_classification_request(request: SemanticClassificationRequestStruct) -> bytes:
-    return request.to_jsonb()
+def _request_from_proto(
+    request: Any,
+) -> SemanticClassificationRequestStruct:
+    return SemanticClassificationRequestStruct(
+        room_id=request.room_id,
+        text_batch=list(request.text_batch),
+        top_n=request.top_n,
+        comment_batch=[
+            SemanticClassificationCommentStruct(
+                comment_id=comment.comment_id,
+                text=comment.text,
+            )
+            for comment in request.comment_batch
+        ],
+    )
 
 
-def _deserialize_classification_request(data: bytes) -> SemanticClassificationRequestStruct:
-    try:
-        return json.decode(data, type=SemanticClassificationRequestStruct)
-    except (DecodeError, ValidationError) as exc:
-        msg = "Invalid semantic classification request"
-        raise ValueError(msg) from exc
+def _result_to_proto(
+    result: SemanticClassificationResultStruct,
+) -> Any:
+    proto = cast("Any", semantic_classification_pb2)
+    return proto.SemanticClassificationResult(
+        semantic_type=_SEMANTIC_TYPE_TO_PROTO[result.semantic_type],
+        confidence=result.confidence,
+        top_n=result.top_n,
+        candidates=[
+            proto.SemanticClassificationCandidate(
+                semantic_type=_SEMANTIC_TYPE_TO_PROTO[candidate.semantic_type],
+                score=candidate.score,
+                comment_id=candidate.comment_id,
+                text=candidate.text,
+                confidence=candidate.confidence,
+            )
+            for candidate in result.candidates
+        ],
+    )
 
 
-def _serialize_classification_result(result: SemanticClassificationResultStruct) -> bytes:
-    return result.to_jsonb()
+def _result_from_proto(
+    result: Any,
+) -> SemanticClassificationResultStruct:
+    return SemanticClassificationResultStruct(
+        semantic_type=_semantic_type_from_proto(result.semantic_type),
+        confidence=result.confidence,
+        top_n=result.top_n,
+        candidates=[
+            SemanticClassificationCandidateStruct(
+                semantic_type=_semantic_type_from_proto(candidate.semantic_type),
+                score=candidate.score,
+                comment_id=candidate.comment_id,
+                text=candidate.text,
+                confidence=candidate.confidence,
+            )
+            for candidate in result.candidates
+        ],
+    )
 
 
-def _deserialize_classification_result(data: bytes) -> SemanticClassificationResultStruct:
-    try:
-        return json.decode(data, type=SemanticClassificationResultStruct)
-    except (DecodeError, ValidationError) as exc:
-        msg = "Invalid semantic classification result"
-        raise ValueError(msg) from exc
+def _semantic_type_from_proto(value: int) -> SemanticType:
+    return _PROTO_TO_SEMANTIC_TYPE.get(value, SemanticType.OTHER)
