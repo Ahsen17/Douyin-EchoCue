@@ -22,6 +22,10 @@ tmp/
 # Ai coding
 .codex/
 .agents/
+.claude/
+.cursor/
+CLAUDE.md
+AGENTS.md
 
 # Distribution / packaging
 .Python
