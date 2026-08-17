@@ -11,6 +11,8 @@
 
 ## Mandatory Standards
 
+- Only read `.codex/harness/` or `.codex/harness_en/` when the task is related to development, testing, or project code.
+- For non-code tasks, do not read those directories unless the user explicitly asks for it.
 - The project must strictly follow the standards under either `.codex/harness/` or `.codex/harness_en/`.
 - Reading one standards directory is sufficient for task context.
 - If the user does not explicitly specify which standards directory to use, read `.codex/harness/` by default.
