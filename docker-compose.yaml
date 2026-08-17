@@ -43,7 +43,7 @@ services:
     volumes:
       - ./config/live.config.yaml:/app/config.yaml:ro
 
-  classifier:
+  lexicon:
     image: aigc-app:0.1.0
     command: ["uv", "run", "app", "lexicon", "serve"]
     expose:
@@ -70,7 +70,7 @@ services:
         condition: service_started
       live:
         condition: service_started
-      classifier:
+      lexicon:
         condition: service_started
     volumes:
       - ./config/app.config.yaml:/app/config.yaml:ro

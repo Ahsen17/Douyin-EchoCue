@@ -3,9 +3,9 @@ from click.testing import CliRunner
 from litestar.config.app import AppConfig
 from pytest import MonkeyPatch
 
-from aigc.base import ClassifierConfig, Config
+from aigc.base import Config, LexiconConfig
+from aigc.core.lexicon import FakeSemanticClassificationClient, GrpcSemanticClassificationClient
 from aigc.core.live import CommentWindowHandler
-from aigc.core.live.classifier import FakeSemanticClassificationClient, GrpcSemanticClassificationClient
 from aigc.server.plugin.lexicon import LexiconPlugin, _resolve_cli_str_option
 
 
@@ -51,9 +51,9 @@ def test_lexicon_plugin_registers_fake_classification_dependencies_by_default(mo
 def test_lexicon_plugin_registers_grpc_classification_dependencies(monkeypatch: MonkeyPatch) -> None:
     def get_config(cls: type[Config]) -> Config:
         return cls(
-            classifier=ClassifierConfig(
+            lexicon=LexiconConfig(
                 grpc_enabled=True,
-                grpc_target="classifier:50051",
+                grpc_target="lexicon:50051",
                 grpc_timeout=2.5,
             )
         )

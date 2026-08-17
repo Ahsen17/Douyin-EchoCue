@@ -8,9 +8,9 @@ from aigc.base.schema import BaseStruct
 from .alchemy import AlchemyConfig
 from .app import AppConfig
 from .auth import AuthConfig
-from .classifier import ClassifierConfig
 from .constants import BASE_DIR
 from .embedding import EmbeddingConfig
+from .lexicon import LexiconConfig
 from .logging import LoggingConfig
 from .qdrant import QdrantConfig
 from .redis import RedisConfig
@@ -29,7 +29,7 @@ class Config(BaseStruct):
     qdrant: QdrantConfig = field(default_factory=QdrantConfig)
     alchemy: AlchemyConfig = field(default_factory=AlchemyConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
-    classifier: ClassifierConfig = field(default_factory=ClassifierConfig)
+    lexicon: LexiconConfig = field(default_factory=LexiconConfig)
 
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
 
@@ -119,12 +119,12 @@ _ENV_OVERRIDES: tuple[tuple[str, tuple[str, ...], type[Any]], ...] = (
     ("AIGC_QDRANT_PORT", ("qdrant", "port"), int),
     ("AIGC_QDRANT_GRPC_PORT", ("qdrant", "grpc_port"), int),
     ("AIGC_QDRANT_PREFER_GRPC", ("qdrant", "prefer_grpc"), bool),
-    ("AIGC_CLASSIFIER_GRPC_ENABLED", ("classifier", "grpc_enabled"), bool),
-    ("AIGC_CLASSIFIER_GRPC_TARGET", ("classifier", "grpc_target"), str),
-    ("AIGC_CLASSIFIER_GRPC_TIMEOUT", ("classifier", "grpc_timeout"), float),
-    ("AIGC_CLASSIFIER_GRPC_HOST", ("classifier", "grpc_host"), str),
-    ("AIGC_CLASSIFIER_GRPC_PORT", ("classifier", "grpc_port"), int),
-    ("AIGC_CLASSIFIER_COLLECTION_NAME", ("classifier", "collection_name"), str),
+    ("AIGC_LEXICON_GRPC_ENABLED", ("lexicon", "grpc_enabled"), bool),
+    ("AIGC_LEXICON_GRPC_TARGET", ("lexicon", "grpc_target"), str),
+    ("AIGC_LEXICON_GRPC_TIMEOUT", ("lexicon", "grpc_timeout"), float),
+    ("AIGC_LEXICON_GRPC_HOST", ("lexicon", "grpc_host"), str),
+    ("AIGC_LEXICON_GRPC_PORT", ("lexicon", "grpc_port"), int),
+    ("AIGC_LEXICON_COLLECTION_NAME", ("lexicon", "collection_name"), str),
     ("AIGC_LOGGING_LEVEL", ("logging", "level"), str),
     ("AIGC_LOGGING_FORMAT", ("logging", "format"), str),
     ("AIGC_LOGGING_FILE_ENABLED", ("logging", "file", "enabled"), bool),

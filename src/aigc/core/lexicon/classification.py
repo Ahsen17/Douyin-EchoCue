@@ -1,4 +1,4 @@
-"""Semantic classification boundaries for live comment windows."""
+"""Semantic classification boundaries for live interaction lexicons."""
 
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Protocol
@@ -61,17 +61,13 @@ class SemanticClassificationClient(Protocol):
 
 
 class FakeSemanticClassificationClient:
-    """Local deterministic classifier used when the remote classifier is unavailable."""
+    """Local deterministic classifier used when the remote lexicon service is unavailable."""
 
     _KEYWORDS: dict[SemanticType, tuple[str, ...]] = {
-        SemanticType.PRICE_PROMOTION: ("价格", "多少钱", "优惠", "券", "便宜", "到手价"),
-        SemanticType.SPECIFICATION: ("尺码", "颜色", "规格", "容量", "型号", "尺寸"),
-        SemanticType.STOCK: ("库存", "还有吗", "补货", "卖完", "缺货", "现货"),
-        SemanticType.LOGISTICS: ("发货", "包邮", "运费", "几天到", "快递", "物流"),
-        SemanticType.AFTER_SALE: ("退", "换", "保修", "售后", "质保", "质量"),
-        SemanticType.SELLING_POINT: ("好用", "效果", "材质", "成分", "卖点", "优势"),
-        SemanticType.AUDIENCE_SCENARIO: ("适合", "孕妇", "学生", "老人", "小孩", "敏感肌"),
-        SemanticType.GENERAL_INTERACTION: ("主播", "看看", "来了", "喜欢", "关注", "下单"),
+        SemanticType.PERSONA_PRAISE: ("厉害", "好帅", "好美", "太强", "太好", "状态", "喜欢你", "像你", "人设", "团队"),
+        SemanticType.INTERACTIVE_PROMPT: ("为什么", "怎么做到", "能不能", "聊聊", "说说", "回应", "选哪个"),
+        SemanticType.PLAYFUL_JOKE: ("笑死", "哈哈", "绷不住", "有梗", "整活", "反差", "名场面"),
+        SemanticType.ATMOSPHERE_BOOST: ("冲", "起来", "刷起来", "气氛", "排面", "一起", "666", "上头"),
     }
 
     async def classify(self, request: SemanticClassificationRequestStruct) -> SemanticClassificationResultStruct:

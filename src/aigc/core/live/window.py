@@ -7,9 +7,9 @@ snapshots.
 from datetime import datetime
 
 from aigc.base import BaseStruct, CamelizedBaseStruct
+from aigc.core.lexicon import SemanticType
 
 from ._conversion import convert_struct
-from .classifier import SemanticType
 
 __all__ = (
     "CommentWindowItemStruct",

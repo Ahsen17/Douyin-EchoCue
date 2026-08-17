@@ -3,14 +3,13 @@ from pathlib import Path
 
 from qdrant_client import AsyncQdrantClient
 
+from aigc.core.lexicon import QdrantSemanticClassificationClient, SemanticType
+from aigc.core.lexicon.lexicon import rebuild_lexicon_collection
 from aigc.core.live import (
     CommentPayloadStruct,
     CommentWindowHandler,
     LiveCommentEventStruct,
-    QdrantSemanticClassificationClient,
-    SemanticType,
 )
-from aigc.core.live.classifier.lexicon import rebuild_lexicon_collection
 
 
 def _comment_event(
@@ -41,18 +40,28 @@ async def test_comment_window_aggregates_comment_count_users_text_batch_and_sema
     now = datetime(2026, 8, 15, 12, 0, tzinfo=UTC)
 
     await handler.ingest_comment(
-        _comment_event(event_id="event-1", comment_id="comment-1", user_id="user-a", content="多少钱", occurred_at=now)
+        _comment_event(
+            event_id="event-1",
+            comment_id="comment-1",
+            user_id="user-a",
+            content="主播今天状态太好了",
+            occurred_at=now,
+        )
     )
     window = await handler.ingest_comment(
         _comment_event(
-            event_id="event-2", comment_id="comment-2", user_id="user-a", content="有优惠吗", occurred_at=now
+            event_id="event-2",
+            comment_id="comment-2",
+            user_id="user-a",
+            content="团队也太强了",
+            occurred_at=now,
         )
     )
 
     assert window.total_count == 2
     assert window.unique_user_count == 1
-    assert window.text_batch == ["多少钱", "有优惠吗"]
-    assert window.semantic_type is SemanticType.PRICE_PROMOTION
+    assert window.text_batch == ["主播今天状态太好了", "团队也太强了"]
+    assert window.semantic_type is SemanticType.PERSONA_PRAISE
 
 
 async def test_comment_window_uses_thirty_second_window_by_default() -> None:
@@ -130,8 +139,8 @@ async def test_comment_window_returns_other_when_classification_is_unreliable() 
 async def test_comment_window_uses_injected_qdrant_classification_client(tmp_path: Path) -> None:
     samples_file = tmp_path / "lexicon_samples.jsonl"
     samples_file.write_text(
-        '{"id":"price_promotion_000001","semantic_type":"price_promotion","text":"多少钱 优惠券","description":"price"}\n'
-        '{"id":"stock_000001","semantic_type":"stock","text":"库存 补货","description":"stock"}\n',
+        '{"id":"persona_praise_000001","semantic_type":"persona_praise","text":"主播今天状态太好了","description":"praise"}\n'
+        '{"id":"playful_joke_000001","semantic_type":"playful_joke","text":"这波操作笑死我了","description":"joke"}\n',
         encoding="utf-8",
     )
     qdrant_client = AsyncQdrantClient(location=":memory:")
@@ -145,10 +154,10 @@ async def test_comment_window_uses_injected_qdrant_classification_client(tmp_pat
             event_id="event-1",
             comment_id="comment-1",
             user_id="user-a",
-            content="这个多少钱,有没有优惠券",
+            content="主播今天状态太好了",
             occurred_at=now,
         )
     )
     await qdrant_client.close()
 
-    assert window.semantic_type is SemanticType.PRICE_PROMOTION
+    assert window.semantic_type is SemanticType.PERSONA_PRAISE

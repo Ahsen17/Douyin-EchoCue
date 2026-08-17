@@ -11,7 +11,7 @@ class TestDouyinLiveCommentSource:
             "method": "WebcastChatMessage",
             "common": {"msgId": "msg-1", "createTime": 1_786_795_200_000},
             "user": {"id": "user-1", "nickname": "用户一"},
-            "content": "这个多少钱",
+            "content": "主播今天状态太好了",
         }
 
         event = source.parse_comment(json.dumps(raw_message), room_id="room-a")
@@ -23,7 +23,7 @@ class TestDouyinLiveCommentSource:
         assert event.user_id == "user-1"
         assert event.occurred_at == datetime(2026, 8, 15, 12, 0, tzinfo=UTC)
         assert event.payload.comment_id == "msg-1"
-        assert event.payload.content == "这个多少钱"
+        assert event.payload.content == "主播今天状态太好了"
         assert event.payload.nickname == "用户一"
 
     def test_ignores_non_comment_messages(self) -> None:
@@ -47,7 +47,7 @@ class TestDouyinLiveCommentSource:
                     "method": "WebcastChatMessage",
                     "common": {"msgId": "msg-1", "createTime": 1_786_800_000_000},
                     "user": {"id": "user-1", "nickname": "用户一"},
-                    "content": "这个多少钱",
+                    "content": "主播今天状态太好了",
                 }
             ),
             room_id="room-a",
@@ -58,4 +58,4 @@ class TestDouyinLiveCommentSource:
 
         assert window.total_count == 1
         assert window.unique_user_count == 1
-        assert window.text_batch == ["这个多少钱"]
+        assert window.text_batch == ["主播今天状态太好了"]

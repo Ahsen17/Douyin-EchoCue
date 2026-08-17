@@ -1,4 +1,4 @@
-"""gRPC transport for live semantic classification."""
+"""gRPC transport for lexicon semantic classification."""
 
 from typing import TYPE_CHECKING, cast
 
@@ -22,7 +22,7 @@ __all__ = (
 )
 
 
-LIVE_CLASSIFICATION_GRPC_SERVICE = "aigc.live.SemanticClassification"
+LIVE_CLASSIFICATION_GRPC_SERVICE = "aigc.lexicon.SemanticClassification"
 LIVE_CLASSIFICATION_GRPC_METHOD = f"/{LIVE_CLASSIFICATION_GRPC_SERVICE}/Classify"
 
 

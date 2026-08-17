@@ -3,29 +3,32 @@ from uuid import UUID
 
 from qdrant_client import AsyncQdrantClient
 
-from aigc.core.live.classifier import SemanticType
-from aigc.core.live.classifier.lexicon import load_lexicon_samples, rebuild_lexicon_collection
+from aigc.core.lexicon import SemanticType
+from aigc.core.lexicon.lexicon import load_lexicon_samples, rebuild_lexicon_collection
 
 
 def test_load_lexicon_samples_decodes_jsonl(tmp_path: Path) -> None:
     samples_file = tmp_path / "lexicon_samples.jsonl"
     samples_file.write_text(
-        '{"id":"price_promotion_000001","semantic_type":"price_promotion","text":"多少钱","description":"price"}\n'
-        '{"id":"stock_000001","semantic_type":"stock","text":"还有库存吗","description":"stock"}\n',
+        '{"id":"persona_praise_000001","semantic_type":"persona_praise","text":"主播今天状态太好了","description":"praise"}\n'
+        '{"id":"interactive_prompt_000001","semantic_type":"interactive_prompt","text":"主播能聊聊这个吗","description":"prompt"}\n',
         encoding="utf-8",
     )
 
     samples = load_lexicon_samples(samples_file)
 
-    assert [sample.semantic_type for sample in samples] == [SemanticType.PRICE_PROMOTION, SemanticType.STOCK]
-    assert [sample.text for sample in samples] == ["多少钱", "还有库存吗"]
+    assert [sample.semantic_type for sample in samples] == [
+        SemanticType.PERSONA_PRAISE,
+        SemanticType.INTERACTIVE_PROMPT,
+    ]
+    assert [sample.text for sample in samples] == ["主播今天状态太好了", "主播能聊聊这个吗"]
 
 
 async def test_rebuild_lexicon_collection_recreates_sparse_collection(tmp_path: Path) -> None:
     samples_file = tmp_path / "lexicon_samples.jsonl"
     samples_file.write_text(
-        '{"id":"price_promotion_000001","semantic_type":"price_promotion","text":"多少钱","description":"price"}\n'
-        '{"id":"stock_000001","semantic_type":"stock","text":"还有库存吗","description":"stock"}\n',
+        '{"id":"persona_praise_000001","semantic_type":"persona_praise","text":"主播今天状态太好了","description":"praise"}\n'
+        '{"id":"interactive_prompt_000001","semantic_type":"interactive_prompt","text":"主播能聊聊这个吗","description":"prompt"}\n',
         encoding="utf-8",
     )
     client = AsyncQdrantClient(location=":memory:")
@@ -46,10 +49,10 @@ async def test_rebuild_lexicon_collection_recreates_sparse_collection(tmp_path: 
     assert "sparse" in collection.config.params.sparse_vectors
     assert all(UUID(str(point.id)) for point in points)
     assert [point.payload["sample_id"] for point in points if point.payload is not None] == [
-        "price_promotion_000001",
-        "stock_000001",
+        "persona_praise_000001",
+        "interactive_prompt_000001",
     ]
     assert [point.payload["semantic_type"] for point in points if point.payload is not None] == [
-        "price_promotion",
-        "stock",
+        "persona_praise",
+        "interactive_prompt",
     ]

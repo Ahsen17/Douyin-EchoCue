@@ -9,20 +9,17 @@ from click.core import ParameterSource
 from litestar.di import Provide
 from litestar.plugins import CLIPluginProtocol, InitPluginProtocol
 
-from aigc.base import ClassifierConfig, Config
+from aigc.base import Config, LexiconConfig
 from aigc.base.config.constants import BASE_DIR
-from aigc.core.live import CommentWindowHandler
-from aigc.core.live.classifier import (
+from aigc.core.lexicon import (
     FakeSemanticClassificationClient,
     GrpcSemanticClassificationClient,
     QdrantSemanticClassificationClient,
     SemanticClassificationClient,
 )
-from aigc.core.live.classifier.lexicon import (
-    DEFAULT_LEXICON_COLLECTION_NAME,
-    rebuild_lexicon_collection,
-)
-from aigc.core.live.classifier.rpc import create_live_classification_grpc_server
+from aigc.core.lexicon.lexicon import DEFAULT_LEXICON_COLLECTION_NAME, rebuild_lexicon_collection
+from aigc.core.lexicon.rpc import create_live_classification_grpc_server
+from aigc.core.live import CommentWindowHandler
 from aigc.lib import QdrantClientFactory
 
 if TYPE_CHECKING:
@@ -71,13 +68,13 @@ def rebuild_lexicon(samples_file: Path, collection_name: str) -> None:
 @lexicon_group.command(name="serve")
 @click.option(
     "--host",
-    default=ClassifierConfig().grpc_host,
+    default=LexiconConfig().grpc_host,
     show_default=True,
     help="gRPC bind host.",
 )
 @click.option(
     "--port",
-    default=ClassifierConfig().grpc_port,
+    default=LexiconConfig().grpc_port,
     show_default=True,
     type=int,
     help="gRPC bind port.",
@@ -93,7 +90,7 @@ def serve_lexicon(ctx: "click.Context", host: str, port: int, collection_name: s
     """Serve live lexicon classification over gRPC."""
 
     async def run() -> None:
-        config = Config.get().classifier
+        config = Config.get().lexicon
         bind_host = _resolve_cli_str_option(ctx, "host", host, config.grpc_host)
         bind_port = _resolve_cli_int_option(ctx, "port", port, config.grpc_port)
         target_collection_name = _resolve_cli_str_option(
@@ -190,7 +187,7 @@ class LexiconPlugin(CLIPluginProtocol, InitPluginProtocol):
         if self.classification_client_state_key in app_config.state:
             return
 
-        config = Config.get().classifier
+        config = Config.get().lexicon
         classification_client = (
             GrpcSemanticClassificationClient(config.grpc_target, timeout=config.grpc_timeout)
             if config.grpc_enabled

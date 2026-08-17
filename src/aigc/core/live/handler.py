@@ -4,11 +4,12 @@ from collections import defaultdict
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
-from .classifier import (
+from aigc.core.lexicon import (
     FakeSemanticClassificationClient,
     SemanticClassificationClient,
     SemanticClassificationRequestStruct,
 )
+
 from .schema import LiveCommentEventStruct
 from .window import CommentWindowItemStruct, CommentWindowStruct
 
