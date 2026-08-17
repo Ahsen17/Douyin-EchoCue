@@ -49,17 +49,27 @@ def lexicon_group() -> None:
     show_default=True,
     help="Qdrant collection name to recreate.",
 )
-def rebuild_lexicon(samples_file: Path, collection_name: str) -> None:
+@click.pass_context
+def rebuild_lexicon(ctx: "click.Context", samples_file: Path, collection_name: str) -> None:
     """Rebuild the live lexicon Qdrant collection."""
 
     async def run() -> None:
-        client = QdrantClientFactory(Config.get().qdrant).new()
-        result = await rebuild_lexicon_collection(
-            client,
-            samples_file=samples_file,
-            collection_name=collection_name,
+        config = Config.get()
+        target_collection_name = _resolve_cli_str_option(
+            ctx,
+            "collection_name",
+            collection_name,
+            config.lexicon.collection_name,
         )
-        await client.close()
+        client = QdrantClientFactory(config.qdrant).new()
+        try:
+            result = await rebuild_lexicon_collection(
+                client,
+                samples_file=samples_file,
+                collection_name=target_collection_name,
+            )
+        finally:
+            await client.close()
         click.echo(f"Rebuilt {result.collection_name} with {result.sample_count} lexicon samples.")
 
     asyncio.run(run())

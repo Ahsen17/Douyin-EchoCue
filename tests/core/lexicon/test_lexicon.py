@@ -30,6 +30,19 @@ class TestLexiconCollection:
         ]
         assert [sample.text for sample in samples] == ["主播今天状态太好了", "主播能聊聊这个吗"]
 
+    def test_project_samples_cover_interaction_semantic_types(self) -> None:
+        samples = load_lexicon_samples(Path("assets/live/lexicon_samples.jsonl"))
+
+        assert {sample.semantic_type for sample in samples} == {
+            SemanticType.PLAYFUL_JOKE,
+            SemanticType.PERSONA_PRAISE,
+            SemanticType.INTERACTIVE_PROMPT,
+            SemanticType.ATMOSPHERE_BOOST,
+            SemanticType.OTHER,
+        }
+        assert all(sample.id for sample in samples)
+        assert all(sample.text for sample in samples)
+
     async def test_rebuild_collection_recreates_sparse_collection(self, tmp_path: Path) -> None:
         samples_file = tmp_path / "lexicon_samples.jsonl"
         samples_file.write_text(self.sample_lines, encoding="utf-8")
