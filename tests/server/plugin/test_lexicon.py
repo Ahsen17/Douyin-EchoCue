@@ -1,5 +1,7 @@
 from pathlib import Path
+from typing import Any, cast
 
+import msgspec.yaml
 import pytest
 import rich_click as click
 from click.testing import CliRunner
@@ -11,6 +13,7 @@ from aigc.core.lexicon import (
     FakeSemanticClassificationClient,
     GrpcSemanticClassificationClient,
     LexiconRebuildResultStruct,
+    QdrantSemanticClassificationClient,
 )
 from aigc.core.live import CommentWindowHandler
 from aigc.server.plugin import lexicon as lexicon_module
@@ -43,6 +46,31 @@ class FakeQdrantClientFactory:
         """Return a fake Qdrant client."""
 
         return self.client
+
+
+class FakeGrpcServer:
+    """Fake gRPC server used by lexicon serve CLI tests."""
+
+    bind_address: str | None
+    started: bool
+    stopped_grace: float | None
+
+    def __init__(self) -> None:
+        self.bind_address = None
+        self.started = False
+        self.stopped_grace = None
+
+    def add_insecure_port(self, bind_address: str) -> None:
+        self.bind_address = bind_address
+
+    async def start(self) -> None:
+        self.started = True
+
+    async def wait_for_termination(self) -> None:
+        return None
+
+    async def stop(self, grace: float) -> None:
+        self.stopped_grace = grace
 
 
 class TestLexiconCliOptionResolver:
@@ -133,6 +161,86 @@ class TestLexiconRebuildCommand:
         assert self.rebuild_calls[0][2] == "cli_lexicon"
 
 
+class TestLexiconServeCommand:
+    runner: CliRunner
+    fake_server: FakeGrpcServer
+    created_clients: list[FakeQdrantClient]
+    created_classifiers: list[QdrantSemanticClassificationClient]
+
+    @pytest.fixture(autouse=True)
+    def set_up(self, monkeypatch: MonkeyPatch) -> None:
+        self.runner = CliRunner()
+        self.fake_server = FakeGrpcServer()
+        self.created_clients = []
+        self.created_classifiers = []
+
+        class TrackingQdrantClientFactory(FakeQdrantClientFactory):
+            def new(factory_self) -> FakeQdrantClient:
+                client = super().new()
+                self.created_clients.append(client)
+                return client
+
+        class TrackingQdrantSemanticClassificationClient(QdrantSemanticClassificationClient):
+            def __init__(tracking_self, qdrant_client: Any, *, collection_name: str) -> None:
+                super().__init__(qdrant_client, collection_name=collection_name)
+                self.created_classifiers.append(tracking_self)
+
+        def create_fake_server(classification_client: object) -> FakeGrpcServer:
+            assert classification_client is self.created_classifiers[0]
+            return self.fake_server
+
+        monkeypatch.setattr(
+            Config,
+            "get",
+            classmethod(
+                lambda cls: Config(
+                    lexicon=LexiconConfig(
+                        grpc_host="0.0.0.0",
+                        grpc_port=50052,
+                        collection_name="config_lexicon",
+                    )
+                )
+            ),
+        )
+        monkeypatch.setattr(lexicon_module, "QdrantClientFactory", TrackingQdrantClientFactory)
+        monkeypatch.setattr(
+            lexicon_module,
+            "QdrantSemanticClassificationClient",
+            TrackingQdrantSemanticClassificationClient,
+        )
+        monkeypatch.setattr(lexicon_module, "create_live_classification_grpc_server", create_fake_server)
+
+    def test_serve_uses_config_bind_and_collection_when_options_use_defaults(self) -> None:
+        result = self.runner.invoke(lexicon_module.lexicon_group, ["serve"])
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "Serving live lexicon classification gRPC on 0.0.0.0:50052."
+        assert self.fake_server.bind_address == "0.0.0.0:50052"
+        assert self.fake_server.started is True
+        assert self.fake_server.stopped_grace == 1
+        assert self.created_classifiers[0]._collection_name == "config_lexicon"
+        assert self.created_clients[0].closed is True
+
+    def test_serve_prefers_command_line_bind_and_collection(self) -> None:
+        result = self.runner.invoke(
+            lexicon_module.lexicon_group,
+            [
+                "serve",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "50053",
+                "--collection-name",
+                "cli_lexicon",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert result.output.strip() == "Serving live lexicon classification gRPC on 127.0.0.1:50053."
+        assert self.fake_server.bind_address == "127.0.0.1:50053"
+        assert self.created_classifiers[0]._collection_name == "cli_lexicon"
+
+
 class TestLexiconPlugin:
     def test_registers_fake_classification_dependencies_by_default(self, monkeypatch: MonkeyPatch) -> None:
         monkeypatch.setattr(Config, "get", classmethod(lambda cls: Config()))
@@ -164,3 +272,45 @@ class TestLexiconPlugin:
 
         assert isinstance(classification_client, GrpcSemanticClassificationClient)
         assert isinstance(comment_window_handler, CommentWindowHandler)
+
+
+class TestLexiconComposeConfig:
+    compose_config: dict[str, Any]
+    app_config: dict[str, Any]
+    local_config: dict[str, Any]
+
+    @pytest.fixture(autouse=True)
+    def set_up(self) -> None:
+        self.compose_config = _load_yaml_dict(Path("docker-compose.yaml"))
+        self.app_config = _load_yaml_dict(Path("config/app.config.yaml"))
+        self.local_config = _load_yaml_dict(Path("config.yaml"))
+
+    def test_compose_lexicon_service_can_build_and_serve_grpc(self) -> None:
+        services = self.compose_config["services"]
+        lexicon_service = services["lexicon"]
+
+        assert lexicon_service["image"] == "aigc-app:0.1.0"
+        assert lexicon_service["build"] == {"context": "."}
+        assert lexicon_service["command"] == ["uv", "run", "app", "lexicon", "serve"]
+        assert lexicon_service["expose"] == ["50051"]
+        assert lexicon_service["depends_on"]["qdrant"]["condition"] == "service_started"
+        assert "./config/app.config.yaml:/app/config.yaml:ro" in lexicon_service["volumes"]
+        assert "./assets:/app/assets:ro" in lexicon_service["volumes"]
+
+    def test_compose_app_uses_lexicon_grpc_target(self) -> None:
+        app_service = self.compose_config["services"]["app"]
+
+        assert app_service["depends_on"]["lexicon"]["condition"] == "service_started"
+        assert self.app_config["lexicon"]["grpc_enabled"] is True
+        assert self.app_config["lexicon"]["grpc_target"] == "lexicon:50051"
+        assert self.app_config["lexicon"]["grpc_host"] == "0.0.0.0"
+        assert self.app_config["qdrant"]["host"] == "qdrant"
+
+    def test_local_default_config_uses_lexicon_block(self) -> None:
+        assert "classifier" not in self.local_config
+        assert self.local_config["lexicon"]["grpc_enabled"] is True
+        assert self.local_config["lexicon"]["grpc_target"] == "127.0.0.1:50051"
+
+
+def _load_yaml_dict(path: Path) -> dict[str, Any]:
+    return cast("dict[str, Any]", msgspec.yaml.decode(path.read_bytes()))
