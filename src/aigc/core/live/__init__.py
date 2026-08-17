@@ -1,5 +1,4 @@
 from .enum import LiveRoomStatus, LiveStatusCode
-from .handler import CommentWindowHandler
 from .schema import (
     CommentPayloadCreate,
     CommentPayloadStruct,
@@ -16,21 +15,30 @@ from .schema import (
 )
 from .source import DouyinLiveCommentSource
 from .window import (
+    CommentWindowCandidateStruct,
+    CommentWindowCandidateVO,
+    CommentWindowHandler,
     CommentWindowItemStruct,
     CommentWindowItemVO,
     CommentWindowStruct,
     CommentWindowVO,
+    CommentWindowWorkflowInputStruct,
+    CommentWindowWorkflowInputVO,
 )
 
 __all__ = (
     "CommentPayloadCreate",
     "CommentPayloadStruct",
     "CommentPayloadVO",
+    "CommentWindowCandidateStruct",
+    "CommentWindowCandidateVO",
     "CommentWindowHandler",
     "CommentWindowItemStruct",
     "CommentWindowItemVO",
     "CommentWindowStruct",
     "CommentWindowVO",
+    "CommentWindowWorkflowInputStruct",
+    "CommentWindowWorkflowInputVO",
     "DouyinLiveCommentSource",
     "LiveCommentEventCreate",
     "LiveCommentEventStruct",

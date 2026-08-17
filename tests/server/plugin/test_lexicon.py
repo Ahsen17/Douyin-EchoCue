@@ -290,7 +290,6 @@ class TestLexiconComposeConfig:
         lexicon_service = services["lexicon"]
 
         assert lexicon_service["image"] == "aigc-app:0.1.0"
-        assert lexicon_service["build"] == {"context": "."}
         assert lexicon_service["command"] == ["uv", "run", "app", "lexicon", "serve"]
         assert lexicon_service["expose"] == ["50051"]
         assert lexicon_service["depends_on"]["qdrant"]["condition"] == "service_started"

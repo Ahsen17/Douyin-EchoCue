@@ -5,7 +5,6 @@ from datetime import UTC, datetime
 from urllib.parse import quote
 
 from .enum import LiveRoomStatus
-from .handler import CommentWindowHandler
 from .schema import (
     CommentPayloadStruct,
     DouyinWebSocketMessageStruct,
@@ -13,7 +12,7 @@ from .schema import (
     LiveStatusEventStruct,
     LiveStatusPayloadStruct,
 )
-from .window import CommentWindowStruct
+from .window import CommentWindowHandler, CommentWindowStruct
 
 __all__ = ("DouyinLiveCommentSource",)
 

@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+from msgspec.structs import fields
 from qdrant_client import AsyncQdrantClient
 
 from aigc.core.lexicon import QdrantSemanticClassificationClient, SemanticType
@@ -9,6 +10,8 @@ from aigc.core.lexicon.lexicon import rebuild_lexicon_collection
 from aigc.core.live import (
     CommentPayloadStruct,
     CommentWindowHandler,
+    CommentWindowWorkflowInputStruct,
+    CommentWindowWorkflowInputVO,
     LiveCommentEventStruct,
 )
 
@@ -195,3 +198,35 @@ class TestCommentWindowHandler:
 
         assert window.top_n == 1
         assert len(window.candidates) == 1
+
+    async def test_builds_comment_window_workflow_input_without_persona_profile_fields(self) -> None:
+        handler = CommentWindowHandler(window_duration=timedelta(seconds=60), top_n=1)
+
+        window = await handler.ingest_comment(
+            _comment_event(
+                event_id="event-1",
+                comment_id="comment-1",
+                user_id="user-a",
+                content="主播今天状态太好了",
+                occurred_at=self.now,
+            )
+        )
+
+        workflow_input = CommentWindowWorkflowInputStruct.from_window(window)
+        workflow_input_vo = CommentWindowWorkflowInputVO.from_struct(workflow_input)
+        field_names = {field.name for field in fields(CommentWindowWorkflowInputStruct)}
+
+        assert workflow_input.room_id == "room-a"
+        assert workflow_input.window_started_at == self.now - timedelta(seconds=60)
+        assert workflow_input.window_ended_at == self.now
+        assert workflow_input.total_count == 1
+        assert workflow_input.unique_user_count == 1
+        assert workflow_input.text_batch == ["主播今天状态太好了"]
+        assert workflow_input.semantic_type is SemanticType.PERSONA_PRAISE
+        assert workflow_input.confidence == 1
+        assert workflow_input.top_n == 1
+        assert workflow_input.candidates[0].comment_id == "comment-1"
+        assert workflow_input.candidates[0].text == "主播今天状态太好了"
+        assert workflow_input_vo.candidates[0].semantic_type is SemanticType.PERSONA_PRAISE
+        assert "persona_id" not in field_names
+        assert "persona_version" not in field_names

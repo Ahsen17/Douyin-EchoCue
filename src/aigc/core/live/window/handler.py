@@ -11,9 +11,9 @@ from aigc.core.lexicon import (
     SemanticClassificationRequestStruct,
 )
 from aigc.core.lexicon.classification import DEFAULT_SEMANTIC_CLASSIFICATION_TOP_N
+from aigc.core.live.schema import LiveCommentEventStruct
 
-from .schema import LiveCommentEventStruct
-from .window import CommentWindowCandidateStruct, CommentWindowItemStruct, CommentWindowStruct
+from .schema import CommentWindowCandidateStruct, CommentWindowItemStruct, CommentWindowStruct
 
 __all__ = ("CommentWindowHandler",)
 
