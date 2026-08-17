@@ -1,5 +1,5 @@
-from aigc.auth.security import SESSION_EXCLUDE_PATHS, create_auth
-from aigc.base import AuthConfig
+from echocue.auth.security import SESSION_EXCLUDE_PATHS, create_auth
+from echocue.base import AuthConfig
 
 
 class TestSessionAuth:

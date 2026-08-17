@@ -2,10 +2,10 @@ from collections.abc import Awaitable, Callable
 from typing import Any, cast
 from uuid import uuid4
 
-from aigc.auth.model import UserModel
-from aigc.auth.security import SESSION_USER_ID_KEY
-from aigc.base import Config
-from aigc.shared.context import provide_request_context
+from echocue.auth.model import UserModel
+from echocue.auth.security import SESSION_USER_ID_KEY
+from echocue.base import Config
+from echocue.shared.context import provide_request_context
 
 
 class RequestStub:

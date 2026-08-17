@@ -3,16 +3,16 @@ from typing import Any, Self, cast
 
 import pytest
 
-from aigc.core.lexicon import (
+from echocue.core.lexicon import (
     FakeSemanticClassificationClient,
     GrpcSemanticClassificationClient,
     SemanticClassificationCommentStruct,
     SemanticClassificationRequestStruct,
     SemanticType,
 )
-from aigc.core.lexicon.proto import semantic_classification_pb2
-from aigc.core.lexicon.rpc import SemanticClassificationGrpcService, create_live_classification_grpc_server
-from aigc.core.live import CommentPayloadStruct, CommentWindowHandler, LiveCommentEventStruct
+from echocue.core.lexicon.proto import semantic_classification_pb2
+from echocue.core.lexicon.rpc import SemanticClassificationGrpcService, create_live_classification_grpc_server
+from echocue.core.live import CommentPayloadStruct, CommentWindowHandler, LiveCommentEventStruct
 
 
 class FakeGrpcContext:
@@ -65,11 +65,11 @@ class TestSemanticClassificationGrpc:
                 **kwargs: Any,
             ) -> FakeUnaryUnaryCall:
                 if assert_method:
-                    assert method == "/aigc.lexicon.SemanticClassification/Classify"
+                    assert method == "/echocue.lexicon.SemanticClassification/Classify"
 
                 return FakeUnaryUnaryCall(request_serializer, response_deserializer)
 
-        mocker.patch("aigc.core.lexicon.rpc.grpc.aio.insecure_channel", return_value=FakeChannel())
+        mocker.patch("echocue.core.lexicon.rpc.grpc.aio.insecure_channel", return_value=FakeChannel())
 
     async def test_client_classifies_through_generated_stub(self, mocker: Any) -> None:
         self.patch_generated_stub_channel(mocker, assert_method=True)

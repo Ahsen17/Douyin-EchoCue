@@ -9,14 +9,14 @@ from litestar.stores.memory import MemoryStore
 from pytest import MonkeyPatch
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
-from aigc.auth.model import UserModel
-from aigc.auth.security import create_auth
-from aigc.base import AlchemyConfig, Config
-from aigc.controller.auth import AuthController
-from aigc.controller.system import SystemController
-from aigc.shared import ApplicationError
-from aigc.shared.context import provide_request_context
-from aigc.shared.exception import (
+from echocue.auth.model import UserModel
+from echocue.auth.security import create_auth
+from echocue.base import AlchemyConfig, Config
+from echocue.controller.auth import AuthController
+from echocue.controller.system import SystemController
+from echocue.shared import ApplicationError
+from echocue.shared.context import provide_request_context
+from echocue.shared.exception import (
     app_error_handler,
     http_exception_handler,
     internal_exception_handler,

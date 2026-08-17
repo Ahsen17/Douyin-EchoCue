@@ -5,7 +5,7 @@ from litestar import Litestar
 from litestar.status_codes import HTTP_200_OK
 from litestar.testing import AsyncTestClient
 
-from aigc.auth.model import UserModel
+from echocue.auth.model import UserModel
 
 
 class TestAuthController:
