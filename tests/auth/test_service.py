@@ -3,9 +3,9 @@ from collections.abc import Awaitable, Callable
 import pytest
 from litestar.exceptions import NotAuthorizedException
 
-from aigc.auth.model import UserModel
-from aigc.auth.schema import LoginRequest
-from aigc.auth.service import UserService
+from echocue.auth.model import UserModel
+from echocue.auth.schema import LoginRequest
+from echocue.auth.service import UserService
 
 
 class TestUserService:

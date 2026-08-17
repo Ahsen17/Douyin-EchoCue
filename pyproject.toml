@@ -1,7 +1,7 @@
 [project]
-name = "aigc"
+name = "echocue"
 version = "0.1.0"
-description = "Generic project for aigc apps."
+description = "Douyin live-stream danmaku reply and prompting assistant."
 readme = "README.md"
 authors = [
     { name = "ahsen17", email = "mesailedward@qq.com" }
@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-app = "aigc.asgi:entrypoint"
+app = "echocue.asgi:entrypoint"
 
 [build-system]
 build-backend = "hatchling.build"
@@ -147,9 +147,9 @@ max-complexity = 12
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402", "F401"]
-"src/aigc/db/migrations/versions/*.py" = ["N999"]
-"src/aigc/core/lexicon/proto/*_pb2.py" = ["ALL"]
-"src/aigc/core/lexicon/proto/*_pb2_grpc.py" = ["ALL"]
+"src/echocue/db/migrations/versions/*.py" = ["N999"]
+"src/echocue/core/lexicon/proto/*_pb2.py" = ["ALL"]
+"src/echocue/core/lexicon/proto/*_pb2_grpc.py" = ["ALL"]
 "**/{tests,docs,tools}/*" = ["E402"]
 "docs/**/*.*" = ["S", "B", "DTZ", "A", "TC", "ERA", "D", "RET"]
 "tests/**/*.*" = [
@@ -185,8 +185,8 @@ docstring-code-format = true
 docstring-code-line-length = 88
 
 [tool.mypy]
-packages = ["aigc", "tests"]
-exclude = ["src/aigc/db/.*"]
+packages = ["echocue", "tests"]
+exclude = ["src/echocue/db/.*"]
 strict = true
 disallow_any_generics = false
 implicit_reexport = false
@@ -205,7 +205,7 @@ show_error_codes = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["aigc.core.lexicon.proto.*"]
+module = ["echocue.core.lexicon.proto.*"]
 ignore_errors = true
 
 [tool.pytest.ini_options]

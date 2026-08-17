@@ -1,7 +1,7 @@
 import json
 from datetime import UTC, datetime
 
-from aigc.core.live import CommentWindowHandler, DouyinLiveCommentSource, LiveRoomStatus, LiveStatusCode
+from echocue.core.live import CommentWindowHandler, DouyinLiveCommentSource, LiveRoomStatus, LiveStatusCode
 
 
 class TestDouyinLiveCommentSource:

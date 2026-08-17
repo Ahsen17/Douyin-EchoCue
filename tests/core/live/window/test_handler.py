@@ -5,9 +5,9 @@ import pytest
 from msgspec.structs import fields
 from qdrant_client import AsyncQdrantClient
 
-from aigc.core.lexicon import QdrantSemanticClassificationClient, SemanticType
-from aigc.core.lexicon.lexicon import rebuild_lexicon_collection
-from aigc.core.live import (
+from echocue.core.lexicon import QdrantSemanticClassificationClient, SemanticType
+from echocue.core.lexicon.lexicon import rebuild_lexicon_collection
+from echocue.core.live import (
     CommentPayloadStruct,
     CommentWindowHandler,
     CommentWindowWorkflowInputStruct,

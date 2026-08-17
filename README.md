@@ -1,4 +1,4 @@
-# aigc
+# Douyin-EchoCue
 
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/framework-Litestar-20232a.svg)](https://litestar.dev/)
@@ -8,12 +8,13 @@
 
 English | [简体中文](README_zh.md)
 
-`aigc` is a Python 3.12 application scaffold built with Litestar, SQLAlchemy, Redis session support,
-structured configuration, database migrations, and project-wrapped development commands.
+Douyin-EchoCue is a Python 3.12 assistant for Douyin live-stream hosts, focused on danmaku reply support and
+prompting assistance. It combines Litestar, SQLAlchemy, Redis session support, structured configuration, database
+migrations, and project-wrapped development commands.
 
 ## Highlights
 
-- Litestar application entry point through `app = "aigc.asgi:entrypoint"`.
+- Litestar application entry point through `app = "echocue.asgi:entrypoint"`.
 - `src` layout with clear boundaries for base, shared, server, controller, domain, and database code.
 - Typed configuration loaded through `Config.get()` from `config.yaml` and runtime environment overrides.
 - SQLAlchemy database integration with migration commands exposed through the project CLI.
@@ -119,7 +120,7 @@ make check-all     # Run the full local quality gate
 ## Project Layout
 
 ```text
-src/aigc/
+src/echocue/
   base/        Base schemas, configuration, and constants
   shared/      Cross-domain response, context, logging, and data foundations
   server/      Litestar assembly, plugins, middleware, logging, and OpenAPI setup
@@ -128,15 +129,15 @@ src/aigc/
   auth/        Authentication domain
   db/          Database migrations and database resources
   lib/         Lightweight pure utilities
-tests/         Automated tests
-harness/       Engineering standards in Chinese
-harness_en/    Engineering standards in English
+tests/                Automated tests
+.codex/harness/       Engineering standards in Chinese
+.codex/harness_en/    Engineering standards in English
 ```
 
 ## Configuration
 
 Application configuration is centralized in `Config.get()` and defaults to `config.yaml`. Runtime overrides are exposed
-through `AIGC_*` environment variables where supported by the configuration layer.
+through `ECHOCUE_*` environment variables where supported by the configuration layer.
 
 Do not commit local secrets, production credentials, private connection strings, or machine-specific configuration.
 

@@ -12,16 +12,16 @@ from click.testing import CliRunner
 from litestar.config.app import AppConfig
 from pytest import MonkeyPatch
 
-from aigc.base import Config, LexiconConfig
-from aigc.core.lexicon import (
+from echocue.base import Config, LexiconConfig
+from echocue.core.lexicon import (
     FakeSemanticClassificationClient,
     GrpcSemanticClassificationClient,
     LexiconRebuildResultStruct,
     QdrantSemanticClassificationClient,
 )
-from aigc.core.live import CommentWindowHandler
-from aigc.server.plugin import lexicon as lexicon_module
-from aigc.server.plugin.lexicon import LexiconPlugin, _resolve_cli_str_option
+from echocue.core.live import CommentWindowHandler
+from echocue.server.plugin import lexicon as lexicon_module
+from echocue.server.plugin.lexicon import LexiconPlugin, _resolve_cli_str_option
 
 
 class FakeQdrantClient:
@@ -294,7 +294,7 @@ class TestLexiconComposeConfig:
         services = self.compose_config["services"]
         lexicon_service = services["lexicon"]
 
-        assert lexicon_service["image"] == "aigc-app:0.1.0"
+        assert lexicon_service["image"] == "echocue-app:0.1.0"
         assert lexicon_service["command"] == ["uv", "run", "app", "lexicon", "serve"]
         assert lexicon_service["expose"] == ["50051"]
         assert lexicon_service["depends_on"]["qdrant"]["condition"] == "service_started"

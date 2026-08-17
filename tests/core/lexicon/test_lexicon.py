@@ -4,8 +4,8 @@ from uuid import UUID
 import pytest
 from qdrant_client import AsyncQdrantClient
 
-from aigc.core.lexicon import SemanticType
-from aigc.core.lexicon.lexicon import load_lexicon_samples, rebuild_lexicon_collection
+from echocue.core.lexicon import SemanticType
+from echocue.core.lexicon.lexicon import load_lexicon_samples, rebuild_lexicon_collection
 
 
 class TestLexiconCollection:

@@ -30,4 +30,4 @@ lexicon:
   collection_name: "live_lexicon"
 
 alchemy:
-  url: "postgresql+asyncpg://aigc:aigc@postgres:5432/aigc"
+  url: "postgresql+asyncpg://echocue:echocue@postgres:5432/echocue"

@@ -6,14 +6,14 @@ import anyio.lowlevel
 import pytest
 from qdrant_client import AsyncQdrantClient
 
-from aigc.core.lexicon import (
+from echocue.core.lexicon import (
     QdrantSemanticClassificationClient,
     SemanticClassificationCommentStruct,
     SemanticClassificationRequestStruct,
     SemanticType,
 )
-from aigc.core.lexicon.lexicon import rebuild_lexicon_collection
-from aigc.shared.embedder import SparseVector
+from echocue.core.lexicon.lexicon import rebuild_lexicon_collection
+from echocue.shared.embedder import SparseVector
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

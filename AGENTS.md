@@ -2,11 +2,11 @@
 
 ## Project Overview
 
-- This is a Python 3.12 project named `aigc`.
-- The project uses a `src` layout, with the main package under `src/aigc`.
+- This is a Python 3.12 project named `Douyin-EchoCue`.
+- The project uses a `src` layout, with the main package under `src/echocue`.
 - Dependency and environment management use `uv`.
 - The application framework is Litestar.
-- The CLI entry point is `app = "aigc.asgi:entrypoint"`.
+- The CLI entry point is `app = "echocue.asgi:entrypoint"`.
 - Configuration is loaded through `Config.get()`, with `config.yaml` as the default configuration file.
 
 ## Mandatory Standards
@@ -23,14 +23,14 @@
 
 ## Repository Layout
 
-- `src/aigc/base`: Base configuration, base schemas, constants, and project foundations.
-- `src/aigc/shared`: Cross-domain shared capabilities, including responses, pagination, logging, context, exceptions, and database service foundations.
-- `src/aigc/server`: Litestar application assembly, plugins, middleware, logging, OpenAPI setup, and route registration.
-- `src/aigc/controller`: HTTP controllers and controller aggregation.
-- `src/aigc/core`: Business-domain modules.
-- `src/aigc/auth`: Authentication domain code currently present in the project.
-- `src/aigc/db`: Database migrations and database resources.
-- `src/aigc/lib`: Lightweight pure utilities unrelated to business logic.
+- `src/echocue/base`: Base configuration, base schemas, constants, and project foundations.
+- `src/echocue/shared`: Cross-domain shared capabilities, including responses, pagination, logging, context, exceptions, and database service foundations.
+- `src/echocue/server`: Litestar application assembly, plugins, middleware, logging, OpenAPI setup, and route registration.
+- `src/echocue/controller`: HTTP controllers and controller aggregation.
+- `src/echocue/core`: Business-domain modules.
+- `src/echocue/auth`: Authentication domain code currently present in the project.
+- `src/echocue/db`: Database migrations and database resources.
+- `src/echocue/lib`: Lightweight pure utilities unrelated to business logic.
 - `tests`: Automated tests.
 - `docs`: Product, architecture, and delivery documentation.
 - `.codex/harness`: Chinese engineering standards and collaboration constraints.
@@ -76,14 +76,14 @@ make docs-build
 - Prefer Python 3.12 generic type parameter syntax where appropriate.
 - Do not use parent-relative imports such as `from ..xx import ...`.
 - Use sibling relative imports only within the same package level.
-- Use absolute `aigc` imports across directories.
+- Use absolute `echocue` imports across directories.
 - Do not use `print` for runtime logging except startup failure messages in CLI entry points.
 - Do not commit virtual environments, caches, build artifacts, secrets, or local-only configuration.
 
 ## Application Boundaries
 
 - `create_app()` should only create the Litestar application.
-- Application startup, plugins, route assembly, logging configuration, middleware, and OpenAPI belong in `src/aigc/server`.
+- Application startup, plugins, route assembly, logging configuration, middleware, and OpenAPI belong in `src/echocue/server`.
 - Controllers handle routes, parameters, and responses only.
 - Controllers should call services and return `GenericResponse` family responses.
 - Services must not return database models directly to controllers.
@@ -107,7 +107,7 @@ make docs-build
 
 ## Testing Rules
 
-- Test directories should mirror the tested modules under `src/aigc`.
+- Test directories should mirror the tested modules under `src/echocue`.
 - Test files use the `test_` prefix.
 - Test function names should describe behavior.
 - Tests must not depend on execution order or shared mutable global state.
