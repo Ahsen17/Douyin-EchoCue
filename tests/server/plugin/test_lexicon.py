@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, cast
 
+import anyio
+import anyio.lowlevel
 import msgspec.yaml
 import pytest
 import rich_click as click
@@ -67,9 +71,10 @@ class FakeGrpcServer:
         self.started = True
 
     async def wait_for_termination(self) -> None:
-        return None
+        await anyio.lowlevel.checkpoint()
 
     async def stop(self, grace: float) -> None:
+        await anyio.lowlevel.checkpoint()
         self.stopped_grace = grace
 
 

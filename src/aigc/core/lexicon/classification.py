@@ -1,12 +1,14 @@
 """Semantic classification boundaries for live interaction lexicons."""
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
+import anyio
+import structlog
 from msgspec import field
 
 from aigc.base import BaseStruct
-from aigc.shared.embedder import Bm25SparseEmbedder
+from aigc.shared.embedder import Bm25SparseEmbedder, SparseVector
 
 from .enum import SemanticType
 from .lexicon import DEFAULT_LEXICON_COLLECTION_NAME
@@ -26,9 +28,15 @@ if TYPE_CHECKING:
     from qdrant_client.models import ScoredPoint
 
 
+class _QdrantQueryResponse(Protocol):
+    points: Iterable["ScoredPoint"]
+
+
 DEFAULT_SEMANTIC_CLASSIFICATION_TOP_N = 5
 MIN_SEMANTIC_CLASSIFICATION_TOP_N = 1
 MAX_SEMANTIC_CLASSIFICATION_TOP_N = 10
+MAX_COMMENT_BATCH_SIZE = 5
+_LOGGER = structlog.stdlib.get_logger(__name__)
 _SEMANTIC_TYPE_PRIORITY: dict[SemanticType, int] = {
     SemanticType.PERSONA_PRAISE: 4,
     SemanticType.INTERACTIVE_PROMPT: 3,
@@ -192,6 +200,30 @@ class QdrantSemanticClassificationClient:
         self._limit = limit
         self._score_threshold = score_threshold
 
+    def warm_up_tokenizer(self) -> None:
+        """Warm the local tokenizer before the first external request."""
+
+        self._embedder.query_embed("warmup")
+
+    async def check_collection(self, *, timeout: float = 0.5) -> None:
+        """Check Qdrant collection metadata with a bounded deadline."""
+
+        try:
+            with anyio.fail_after(timeout):
+                await self._client.get_collection(self._collection_name)
+        except TimeoutError:
+            _LOGGER.warning(
+                "qdrant semantic classification collection check timed out",
+                extra={"collection_name": self._collection_name, "timeout": timeout},
+                exc_info=True,
+            )
+        except Exception:
+            _LOGGER.warning(
+                "qdrant semantic classification collection check failed",
+                extra={"collection_name": self._collection_name},
+                exc_info=True,
+            )
+
     async def classify(self, request: SemanticClassificationRequestStruct) -> SemanticClassificationResultStruct:
         """Classify a comment window through Qdrant sparse retrieval."""
 
@@ -207,16 +239,8 @@ class QdrantSemanticClassificationClient:
         if not query_vectors:
             return SemanticClassificationResultStruct.other(top_n=top_n)
 
-        try:
-            response = await self._client.query_points(
-                collection_name=self._collection_name,
-                query=query_vectors[0],
-                using="sparse",
-                limit=self._limit,
-                with_payload=["semantic_type"],
-                score_threshold=self._score_threshold,
-            )
-        except Exception:  # noqa: BLE001
+        response = await self._query_points(query_vectors[0])
+        if response is None:
             return SemanticClassificationResultStruct.other(top_n=top_n)
 
         scores = _score_points_by_semantic_type(response.points)
@@ -246,23 +270,13 @@ class QdrantSemanticClassificationClient:
         *,
         top_n: int,
     ) -> SemanticClassificationResultStruct:
-        candidates: list[SemanticClassificationCandidateStruct] = []
-        for comment in comments:
-            scores = await self._query_scores(comment.text)
-            if not scores:
-                continue
+        candidate_results: list[SemanticClassificationCandidateStruct] = []
 
-            semantic_type, score = _select_semantic_type(scores)
-            total_score = sum(scores.values())
-            candidates.append(
-                SemanticClassificationCandidateStruct(
-                    comment_id=comment.comment_id,
-                    text=comment.text,
-                    semantic_type=semantic_type,
-                    score=score,
-                    confidence=score / total_score,
-                )
-            )
+        for comment_batch in _chunk_comments(comments, MAX_COMMENT_BATCH_SIZE):
+            batch_candidates = await self._classify_comment_batch_chunk(comment_batch)
+            candidate_results.extend(batch_candidates)
+
+        candidates = candidate_results
 
         if not candidates:
             return SemanticClassificationResultStruct.other(top_n=top_n)
@@ -278,6 +292,42 @@ class QdrantSemanticClassificationClient:
             candidates=candidates,
         )
 
+    async def _classify_comment_batch_chunk(
+        self,
+        comments: list[SemanticClassificationCommentStruct],
+    ) -> list[SemanticClassificationCandidateStruct]:
+        candidate_results: list[SemanticClassificationCandidateStruct | None] = [None] * len(comments)
+        task_handles: list[object] = []
+
+        async def classify_comment(index: int, comment: SemanticClassificationCommentStruct) -> None:
+            candidate_results[index] = await self._classify_comment(comment)
+
+        async with anyio.create_task_group() as task_group:
+            for index, comment in enumerate(comments):
+                task_handles.append(task_group.start_soon(classify_comment, index, comment))
+
+        del task_handles
+
+        return [candidate for candidate in candidate_results if candidate is not None]
+
+    async def _classify_comment(
+        self,
+        comment: SemanticClassificationCommentStruct,
+    ) -> SemanticClassificationCandidateStruct | None:
+        scores = await self._query_scores(comment.text)
+        if not scores:
+            return None
+
+        semantic_type, score = _select_semantic_type(scores)
+        total_score = sum(scores.values())
+        return SemanticClassificationCandidateStruct(
+            comment_id=comment.comment_id,
+            text=comment.text,
+            semantic_type=semantic_type,
+            score=score,
+            confidence=score / total_score,
+        )
+
     async def _query_scores(self, text: str) -> dict[SemanticType, float]:
         query_text = text.strip()
         if not query_text:
@@ -287,19 +337,32 @@ class QdrantSemanticClassificationClient:
         if not query_vectors:
             return {}
 
-        try:
-            response = await self._client.query_points(
-                collection_name=self._collection_name,
-                query=query_vectors[0],
-                using="sparse",
-                limit=self._limit,
-                with_payload=["semantic_type"],
-                score_threshold=self._score_threshold,
-            )
-        except Exception:  # noqa: BLE001
+        response = await self._query_points(query_vectors[0])
+        if response is None:
             return {}
 
         return _score_points_by_semantic_type(response.points)
+
+    async def _query_points(self, query_vector: SparseVector) -> _QdrantQueryResponse | None:
+        try:
+            return cast(
+                "_QdrantQueryResponse",
+                await self._client.query_points(
+                    collection_name=self._collection_name,
+                    query=query_vector,
+                    using="sparse",
+                    limit=self._limit,
+                    with_payload=["semantic_type"],
+                    score_threshold=self._score_threshold,
+                ),
+            )
+        except Exception:
+            _LOGGER.warning(
+                "qdrant semantic classification query failed",
+                extra={"collection_name": self._collection_name},
+                exc_info=True,
+            )
+            return None
 
 
 def _score_points_by_semantic_type(points: Iterable["ScoredPoint"]) -> dict[SemanticType, float]:
@@ -331,6 +394,21 @@ def _score_candidates_by_semantic_type(
         scores[candidate.semantic_type] = scores.get(candidate.semantic_type, 0) + candidate.score
 
     return scores
+
+
+def _chunk_comments(
+    comments: Iterable[SemanticClassificationCommentStruct],
+    size: int,
+) -> Iterable[list[SemanticClassificationCommentStruct]]:
+    batch: list[SemanticClassificationCommentStruct] = []
+    for comment in comments:
+        batch.append(comment)
+        if len(batch) == size:
+            yield batch
+            batch = []
+
+    if batch:
+        yield batch
 
 
 def _select_semantic_type(scores: dict[SemanticType, float]) -> tuple[SemanticType, float]:

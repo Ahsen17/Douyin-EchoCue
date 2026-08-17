@@ -1,9 +1,9 @@
 """Lexicon CLI plugin for Litestar."""
 
-import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+import anyio
 import rich_click as click
 from click.core import ParameterSource
 from litestar.di import Provide
@@ -72,7 +72,7 @@ def rebuild_lexicon(ctx: "click.Context", samples_file: Path, collection_name: s
             await client.close()
         click.echo(f"Rebuilt {result.collection_name} with {result.sample_count} lexicon samples.")
 
-    asyncio.run(run())
+    anyio.run(run)
 
 
 @lexicon_group.command(name="serve")
@@ -114,6 +114,7 @@ def serve_lexicon(ctx: "click.Context", host: str, port: int, collection_name: s
             qdrant_client,
             collection_name=target_collection_name,
         )
+        classification_client.warm_up_tokenizer()
         server = create_live_classification_grpc_server(classification_client)
         bind_address = f"{bind_host}:{bind_port}"
         server.add_insecure_port(bind_address)
@@ -125,7 +126,7 @@ def serve_lexicon(ctx: "click.Context", host: str, port: int, collection_name: s
             await server.stop(grace=1)
             await qdrant_client.close()
 
-    asyncio.run(run())
+    anyio.run(run)
 
 
 def _resolve_cli_str_option(
