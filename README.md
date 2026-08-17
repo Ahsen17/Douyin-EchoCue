@@ -8,18 +8,14 @@
 
 English | [简体中文](README_zh.md)
 
-Douyin-EchoCue is a Python 3.12 assistant for Douyin live-stream hosts, focused on danmaku reply support and
-prompting assistance. It combines Litestar, SQLAlchemy, Redis session support, structured configuration, database
-migrations, and project-wrapped development commands.
+Douyin-EchoCue is a Douyin live-stream interaction assistant for hosts and operations teams.
+It helps turn live chat into faster replies, more consistent prompting, and a smoother on-air interaction flow.
 
-## Highlights
+## Typical Scenarios
 
-- Litestar application entry point through `app = "echocue.asgi:entrypoint"`.
-- `src` layout with clear boundaries for base, shared, server, controller, domain, and database code.
-- Typed configuration loaded through `Config.get()` from `config.yaml` and runtime environment overrides.
-- SQLAlchemy database integration with migration commands exposed through the project CLI.
-- Makefile targets for dependency sync, linting, tests, coverage, and Docker Compose.
-- Automated tests under `tests`, organized to mirror the package layout.
+- A host wants quick, natural reply suggestions during a busy live room.
+- A team wants to keep responses consistent with the room's tone and style.
+- An operator wants a structured way to assist with live interaction without interrupting the show.
 
 ## Requirements
 
@@ -117,64 +113,6 @@ make check         # Run formatting fixes, linting, and tests
 make check-all     # Run the full local quality gate
 ```
 
-## Project Layout
-
-```text
-src/echocue/
-  base/        Base schemas, configuration, and constants
-  shared/      Cross-domain response, context, logging, and data foundations
-  server/      Litestar assembly, plugins, middleware, logging, and OpenAPI setup
-  controller/  HTTP controllers and route aggregation
-  core/        Business-domain modules
-  auth/        Authentication domain
-  db/          Database migrations and database resources
-  lib/         Lightweight pure utilities
-tests/                Automated tests
-.codex/harness/       Engineering standards in Chinese
-.codex/harness_en/    Engineering standards in English
-```
-
-## Configuration
-
-Application configuration is centralized in `Config.get()` and defaults to `config.yaml`. Runtime overrides are exposed
-through `ECHOCUE_*` environment variables where supported by the configuration layer.
-
-Do not commit local secrets, production credentials, private connection strings, or machine-specific configuration.
-
-## Testing
-
-Run the default test suite:
-
-```bash
-make test
-```
-
-Run coverage:
-
-```bash
-make coverage
-```
-
-API tests should use Litestar testing tools and should not start external network services directly. Databases, Redis,
-and file-system resources should be isolated through fixtures.
-
-## Development Standards
-
-Project changes must follow the standards in `harness/` or `harness_en/`. When changing the standards themselves, keep
-the Chinese and English versions synchronized.
-
-Before submitting changes, run the strongest feasible validation for the affected area:
-
-```bash
-make check
-```
-
-For changes touching shared abstractions, database behavior, types, or response structures, also run:
-
-```bash
-make type-check
-make coverage
-```
 
 ## License
 
