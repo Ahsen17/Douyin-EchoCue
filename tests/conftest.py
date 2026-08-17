@@ -24,8 +24,8 @@ from aigc.shared.exception import (
 )
 
 
-@pytest.fixture
-async def test_config(tmp_path: Path, monkeypatch: MonkeyPatch) -> AsyncGenerator[Config, None]:
+@pytest.fixture(name="test_config")
+async def _test_config(tmp_path: Path, monkeypatch: MonkeyPatch) -> AsyncGenerator[Config, None]:
     database_path = tmp_path / "test.sqlite3"
     config = Config(
         alchemy=AlchemyConfig(

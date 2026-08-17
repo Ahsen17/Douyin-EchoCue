@@ -1,28 +1,25 @@
 """Lexicon CLI plugin for Litestar."""
 
-import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+import anyio
 import rich_click as click
 from click.core import ParameterSource
 from litestar.di import Provide
 from litestar.plugins import CLIPluginProtocol, InitPluginProtocol
 
-from aigc.base import ClassifierConfig, Config
+from aigc.base import Config, LexiconConfig
 from aigc.base.config.constants import BASE_DIR
-from aigc.core.live import CommentWindowHandler
-from aigc.core.live.classifier import (
+from aigc.core.lexicon import (
     FakeSemanticClassificationClient,
     GrpcSemanticClassificationClient,
     QdrantSemanticClassificationClient,
     SemanticClassificationClient,
 )
-from aigc.core.live.classifier.lexicon import (
-    DEFAULT_LEXICON_COLLECTION_NAME,
-    rebuild_lexicon_collection,
-)
-from aigc.core.live.classifier.rpc import create_live_classification_grpc_server
+from aigc.core.lexicon.lexicon import DEFAULT_LEXICON_COLLECTION_NAME, rebuild_lexicon_collection
+from aigc.core.lexicon.rpc import create_live_classification_grpc_server
+from aigc.core.live import CommentWindowHandler
 from aigc.lib import QdrantClientFactory
 
 if TYPE_CHECKING:
@@ -52,32 +49,42 @@ def lexicon_group() -> None:
     show_default=True,
     help="Qdrant collection name to recreate.",
 )
-def rebuild_lexicon(samples_file: Path, collection_name: str) -> None:
+@click.pass_context
+def rebuild_lexicon(ctx: "click.Context", samples_file: Path, collection_name: str) -> None:
     """Rebuild the live lexicon Qdrant collection."""
 
     async def run() -> None:
-        client = QdrantClientFactory(Config.get().qdrant).new()
-        result = await rebuild_lexicon_collection(
-            client,
-            samples_file=samples_file,
-            collection_name=collection_name,
+        config = Config.get()
+        target_collection_name = _resolve_cli_str_option(
+            ctx,
+            "collection_name",
+            collection_name,
+            config.lexicon.collection_name,
         )
-        await client.close()
+        client = QdrantClientFactory(config.qdrant).new()
+        try:
+            result = await rebuild_lexicon_collection(
+                client,
+                samples_file=samples_file,
+                collection_name=target_collection_name,
+            )
+        finally:
+            await client.close()
         click.echo(f"Rebuilt {result.collection_name} with {result.sample_count} lexicon samples.")
 
-    asyncio.run(run())
+    anyio.run(run)
 
 
 @lexicon_group.command(name="serve")
 @click.option(
     "--host",
-    default=ClassifierConfig().grpc_host,
+    default=LexiconConfig().grpc_host,
     show_default=True,
     help="gRPC bind host.",
 )
 @click.option(
     "--port",
-    default=ClassifierConfig().grpc_port,
+    default=LexiconConfig().grpc_port,
     show_default=True,
     type=int,
     help="gRPC bind port.",
@@ -93,7 +100,7 @@ def serve_lexicon(ctx: "click.Context", host: str, port: int, collection_name: s
     """Serve live lexicon classification over gRPC."""
 
     async def run() -> None:
-        config = Config.get().classifier
+        config = Config.get().lexicon
         bind_host = _resolve_cli_str_option(ctx, "host", host, config.grpc_host)
         bind_port = _resolve_cli_int_option(ctx, "port", port, config.grpc_port)
         target_collection_name = _resolve_cli_str_option(
@@ -107,6 +114,7 @@ def serve_lexicon(ctx: "click.Context", host: str, port: int, collection_name: s
             qdrant_client,
             collection_name=target_collection_name,
         )
+        classification_client.warm_up_tokenizer()
         server = create_live_classification_grpc_server(classification_client)
         bind_address = f"{bind_host}:{bind_port}"
         server.add_insecure_port(bind_address)
@@ -118,7 +126,7 @@ def serve_lexicon(ctx: "click.Context", host: str, port: int, collection_name: s
             await server.stop(grace=1)
             await qdrant_client.close()
 
-    asyncio.run(run())
+    anyio.run(run)
 
 
 def _resolve_cli_str_option(
@@ -190,7 +198,7 @@ class LexiconPlugin(CLIPluginProtocol, InitPluginProtocol):
         if self.classification_client_state_key in app_config.state:
             return
 
-        config = Config.get().classifier
+        config = Config.get().lexicon
         classification_client = (
             GrpcSemanticClassificationClient(config.grpc_target, timeout=config.grpc_timeout)
             if config.grpc_enabled

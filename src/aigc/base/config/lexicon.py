@@ -1,10 +1,10 @@
 from aigc.base.schema import BaseStruct
 
-__all__ = ("ClassifierConfig",)
+__all__ = ("LexiconConfig",)
 
 
-class ClassifierConfig(BaseStruct):
-    """Configuration for live semantic classification."""
+class LexiconConfig(BaseStruct):
+    """Configuration for live interaction lexicon classification."""
 
     grpc_enabled: bool = False
     grpc_target: str = "127.0.0.1:50051"

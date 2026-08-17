@@ -21,9 +21,9 @@ qdrant:
   grpc_port: 6334
   prefer_grpc: true
 
-classifier:
+lexicon:
   grpc_enabled: true
-  grpc_target: "classifier:50051"
+  grpc_target: "lexicon:50051"
   grpc_timeout: 1.0
   grpc_host: "0.0.0.0"
   grpc_port: 50051

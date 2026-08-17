@@ -4,13 +4,16 @@ from collections import defaultdict
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 
-from .classifier import (
+from aigc.core.lexicon import (
     FakeSemanticClassificationClient,
     SemanticClassificationClient,
+    SemanticClassificationCommentStruct,
     SemanticClassificationRequestStruct,
 )
-from .schema import LiveCommentEventStruct
-from .window import CommentWindowItemStruct, CommentWindowStruct
+from aigc.core.lexicon.classification import DEFAULT_SEMANTIC_CLASSIFICATION_TOP_N
+from aigc.core.live.schema import LiveCommentEventStruct
+
+from .schema import CommentWindowCandidateStruct, CommentWindowItemStruct, CommentWindowStruct
 
 __all__ = ("CommentWindowHandler",)
 
@@ -20,11 +23,13 @@ class CommentWindowHandler:
 
     def __init__(
         self,
-        window_duration: timedelta = timedelta(seconds=30),
+        window_duration: timedelta = timedelta(seconds=10),
         classification_client: SemanticClassificationClient | None = None,
+        top_n: int = DEFAULT_SEMANTIC_CLASSIFICATION_TOP_N,
     ) -> None:
         self._window_duration = window_duration
         self._classification_client = classification_client or FakeSemanticClassificationClient()
+        self._top_n = top_n
         self._items_by_room: dict[str, list[CommentWindowItemStruct]] = defaultdict(list)
         self._comment_ids_by_room: dict[str, set[str]] = defaultdict(set)
 
@@ -55,7 +60,15 @@ class CommentWindowHandler:
         window_started_at = window_ended_at - self._window_duration
         text_batch = [item.content for item in items]
         result = await self._classification_client.classify(
-            SemanticClassificationRequestStruct(room_id=room_id, text_batch=text_batch)
+            SemanticClassificationRequestStruct(
+                room_id=room_id,
+                text_batch=text_batch,
+                top_n=self._top_n,
+                comment_batch=[
+                    SemanticClassificationCommentStruct(comment_id=item.comment_id, text=item.content)
+                    for item in items
+                ],
+            )
         )
 
         return CommentWindowStruct(
@@ -67,6 +80,18 @@ class CommentWindowHandler:
             comments=items,
             text_batch=text_batch,
             semantic_type=result.semantic_type,
+            confidence=result.confidence,
+            top_n=result.top_n,
+            candidates=[
+                CommentWindowCandidateStruct(
+                    comment_id=candidate.comment_id,
+                    text=candidate.text,
+                    semantic_type=candidate.semantic_type,
+                    score=candidate.score,
+                    confidence=candidate.confidence,
+                )
+                for candidate in result.candidates
+            ],
         )
 
     def _prune_room(self, room_id: str, now: datetime) -> None:
