@@ -1,3 +1,4 @@
+from .enum import LiveRoomStatus, LiveStatusCode
 from .handler import CommentWindowHandler
 from .schema import (
     CommentPayloadCreate,
@@ -6,6 +7,12 @@ from .schema import (
     LiveCommentEventCreate,
     LiveCommentEventStruct,
     LiveCommentEventVO,
+    LiveStatusEventCreate,
+    LiveStatusEventStruct,
+    LiveStatusEventVO,
+    LiveStatusPayloadCreate,
+    LiveStatusPayloadStruct,
+    LiveStatusPayloadVO,
 )
 from .source import DouyinLiveCommentSource
 from .window import (
@@ -28,4 +35,12 @@ __all__ = (
     "LiveCommentEventCreate",
     "LiveCommentEventStruct",
     "LiveCommentEventVO",
+    "LiveRoomStatus",
+    "LiveStatusCode",
+    "LiveStatusEventCreate",
+    "LiveStatusEventStruct",
+    "LiveStatusEventVO",
+    "LiveStatusPayloadCreate",
+    "LiveStatusPayloadStruct",
+    "LiveStatusPayloadVO",
 )
