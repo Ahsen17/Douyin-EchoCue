@@ -3,6 +3,7 @@ from .classification import (
     QdrantSemanticClassificationClient,
     SemanticClassificationCandidateStruct,
     SemanticClassificationClient,
+    SemanticClassificationCommentStruct,
     SemanticClassificationRequestStruct,
     SemanticClassificationResultStruct,
 )
@@ -24,6 +25,7 @@ __all__ = (
     "QdrantSemanticClassificationClient",
     "SemanticClassificationCandidateStruct",
     "SemanticClassificationClient",
+    "SemanticClassificationCommentStruct",
     "SemanticClassificationGrpcService",
     "SemanticClassificationRequestStruct",
     "SemanticClassificationResultStruct",

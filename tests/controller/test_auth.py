@@ -1,5 +1,6 @@
 from collections.abc import Awaitable, Callable
 
+import pytest
 from litestar import Litestar
 from litestar.status_codes import HTTP_200_OK
 from litestar.testing import AsyncTestClient
@@ -8,14 +9,22 @@ from aigc.auth.model import UserModel
 
 
 class TestAuthController:
-    async def test_auth_session_login_and_me(
+    app: Litestar
+    create_test_user: Callable[..., Awaitable[UserModel]]
+
+    @pytest.fixture(autouse=True)
+    def set_up(
         self,
         app: Litestar,
         create_test_user: Callable[..., Awaitable[UserModel]],
     ) -> None:
-        await create_test_user(username="admin", password="admin", is_superuser=True)
+        self.app = app
+        self.create_test_user = create_test_user
 
-        async with AsyncTestClient(app=app) as client:
+    async def test_auth_session_login_and_me(self) -> None:
+        await self.create_test_user(username="admin", password="admin", is_superuser=True)
+
+        async with AsyncTestClient(app=self.app) as client:
             login_response = await client.post("/auth/session", json={"username": "admin", "password": "admin"})
 
             assert login_response.status_code == HTTP_200_OK
