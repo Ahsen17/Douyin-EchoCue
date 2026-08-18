@@ -17,6 +17,9 @@
     "dev": "npm run build:electron && concurrently --kill-others-on-fail \"vite\" \"tsc -p tsconfig.electron.json --watch\" \"wait-on http://localhost:5173 && electron .\"",
     "package:win": "npm run build && electron-builder --win"
   },
+  "dependencies": {
+    "@fontsource/noto-sans-sc": "^5.2.5"
+  },
   "devDependencies": {
     "@types/node": "^22.15.21",
     "concurrently": "^9.1.2",
