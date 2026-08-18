@@ -95,22 +95,22 @@ uv run app database check
 Build and start services:
 
 ```bash
-make compose-build
-make compose-up
+make compose build
+make compose up
 ```
 
 Start or operate on a single service:
 
 ```bash
-make compose-up SERVICE=postgres
-make compose-build SERVICE=app
-make compose-logs SERVICE=app
+make compose up postgres
+make compose build app
+make compose logs app
 ```
 
 Stop services:
 
 ```bash
-make compose-down
+make compose down
 ```
 
 The Compose app service builds the local Docker image from `Dockerfile`. The database service uses a PostgreSQL
