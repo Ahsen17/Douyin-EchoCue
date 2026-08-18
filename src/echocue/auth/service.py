@@ -4,6 +4,7 @@ This module handles user lookup, password verification, and login state checks.
 Services return service-layer structs and do not expose database models to controllers.
 """
 
+from collections.abc import Sequence
 from uuid import UUID
 
 from advanced_alchemy.repository import SQLAlchemyAsyncRepository
@@ -116,12 +117,26 @@ class OrganizationService(CustomService[OrganizationModel]):
 
     repository_type = _Repository
 
+    async def get_by_id(self, organization_id: UUID) -> OrganizationStruct | None:
+        """Get an organization by primary key."""
+
+        organization = await self.get_one_or_none(id=organization_id)
+
+        return organization.to_struct() if organization else None
+
     async def get_by_owner_user_id(self, user_id: UUID) -> OrganizationStruct | None:
         """Get an organization by owner user ID."""
 
         organization = await self.get_one_or_none(owner_user_id=user_id)
 
         return organization.to_struct() if organization else None
+
+    async def list_by_owner_user_id(self, user_id: UUID) -> list[OrganizationStruct]:
+        """List organizations owned by a user."""
+
+        organizations = await self.list(owner_user_id=user_id)
+
+        return [organization.to_struct() for organization in organizations]
 
 
 class OrganizationMemberService(CustomService[OrganizationMemberModel]):
@@ -134,6 +149,13 @@ class OrganizationMemberService(CustomService[OrganizationMemberModel]):
 
     repository_type = _Repository
 
+    async def list_by_user_id(self, user_id: UUID) -> list[OrganizationMemberStruct]:
+        """List memberships for a user."""
+
+        memberships = await self.list(user_id=user_id)
+
+        return [membership.to_struct() for membership in memberships]
+
     async def get_by_organization_and_user(
         self,
         organization_id: UUID,
@@ -145,6 +167,15 @@ class OrganizationMemberService(CustomService[OrganizationMemberModel]):
 
         return member.to_struct() if member else None
 
+    async def list_by_organization_ids(self, organization_ids: Sequence[UUID]) -> list[OrganizationMemberStruct]:
+        """List memberships for a collection of organizations."""
+
+        memberships: list[OrganizationMemberModel] = []
+        for organization_id in organization_ids:
+            memberships.extend(await self.list(organization_id=organization_id))
+
+        return [membership.to_struct() for membership in memberships]
+
 
 class RoomService(CustomService[RoomModel]):
     """Room database service."""
@@ -155,6 +186,20 @@ class RoomService(CustomService[RoomModel]):
         model_type: type[RoomModel] = RoomModel
 
     repository_type = _Repository
+
+    async def list_by_owner_user_id(self, user_id: UUID) -> list[RoomStruct]:
+        """List rooms owned by a user."""
+
+        rooms = await self.list(owner_user_id=user_id)
+
+        return [room.to_struct() for room in rooms]
+
+    async def list_by_organization_id(self, organization_id: UUID) -> list[RoomStruct]:
+        """List rooms owned by an organization."""
+
+        rooms = await self.list(organization_id=organization_id)
+
+        return [room.to_struct() for room in rooms]
 
     async def get_by_room_id(self, room_id: str) -> RoomStruct | None:
         """Get a room by its business room ID."""
@@ -178,5 +223,21 @@ class RoomAuthorizationService(CustomService[RoomAuthorizationModel]):
         """List room authorization grants for a room."""
 
         grants = await self.list(room_id=room_id)
+
+        return [grant.to_struct() for grant in grants]
+
+    async def list_by_user_id(self, user_id: UUID) -> list[RoomAuthorizationStruct]:
+        """List room authorization grants for a user."""
+
+        grants = await self.list(user_id=user_id)
+
+        return [grant.to_struct() for grant in grants]
+
+    async def list_by_organization_ids(self, organization_ids: Sequence[UUID]) -> list[RoomAuthorizationStruct]:
+        """List room authorization grants for multiple organizations."""
+
+        grants: list[RoomAuthorizationModel] = []
+        for organization_id in organization_ids:
+            grants.extend(await self.list(organization_id=organization_id))
 
         return [grant.to_struct() for grant in grants]

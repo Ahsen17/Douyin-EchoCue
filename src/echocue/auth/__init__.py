@@ -1,11 +1,13 @@
 from .enum import (
     AccountCertificationStatus,
     OrganizationMemberRole,
+    PermissionAction,
     RoomAuthorizationScope,
     RoomAuthorizationStatus,
     RoomOwnershipKind,
 )
 from .exception import UserDisabledError
+from .handler import AuthPermissionHandler
 from .model import (
     AccountCertificationModel,
     OrganizationMemberModel,
@@ -16,10 +18,14 @@ from .model import (
 )
 from .schema import (
     AccountCertificationStruct,
+    AuthenticationResultStruct,
     AuthSessionVO,
     LoginRequest,
     OrganizationMemberStruct,
     OrganizationStruct,
+    PermissionCheckRequestStruct,
+    PermissionCheckResultStruct,
+    PermissionContextStruct,
     RoomAuthorizationStruct,
     RoomStruct,
     UserStruct,
@@ -39,7 +45,9 @@ __all__ = (
     "AccountCertificationService",
     "AccountCertificationStatus",
     "AccountCertificationStruct",
+    "AuthPermissionHandler",
     "AuthSessionVO",
+    "AuthenticationResultStruct",
     "LoginRequest",
     "OrganizationMemberModel",
     "OrganizationMemberRole",
@@ -48,6 +56,10 @@ __all__ = (
     "OrganizationModel",
     "OrganizationService",
     "OrganizationStruct",
+    "PermissionAction",
+    "PermissionCheckRequestStruct",
+    "PermissionCheckResultStruct",
+    "PermissionContextStruct",
     "RoomAuthorizationModel",
     "RoomAuthorizationScope",
     "RoomAuthorizationService",

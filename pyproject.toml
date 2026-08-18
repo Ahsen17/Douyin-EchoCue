@@ -152,6 +152,8 @@ max-complexity = 12
 "src/echocue/db/migrations/versions/*.py" = ["N999"]
 "src/echocue/core/lexicon/proto/*_pb2.py" = ["ALL"]
 "src/echocue/core/lexicon/proto/*_pb2_grpc.py" = ["ALL"]
+"src/echocue/auth/proto/*_pb2.py" = ["ALL"]
+"src/echocue/auth/proto/*_pb2_grpc.py" = ["ALL"]
 "**/{tests,docs,tools}/*" = ["E402"]
 "docs/**/*.*" = ["S", "B", "DTZ", "A", "TC", "ERA", "D", "RET"]
 "tests/**/*.*" = [
@@ -207,7 +209,7 @@ show_error_codes = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["echocue.core.lexicon.proto.*"]
+module = ["echocue.auth.proto.*", "echocue.core.lexicon.proto.*"]
 ignore_errors = true
 
 [tool.pytest.ini_options]

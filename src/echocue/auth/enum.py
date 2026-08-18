@@ -5,6 +5,7 @@ from enum import StrEnum, auto
 __all__ = (
     "AccountCertificationStatus",
     "OrganizationMemberRole",
+    "PermissionAction",
     "RoomAuthorizationScope",
     "RoomAuthorizationStatus",
     "RoomOwnershipKind",
@@ -77,3 +78,19 @@ class RoomAuthorizationScope(StrEnum):
 
     START = auto()
     """The grant allows starting the room assistant."""
+
+
+class PermissionAction(StrEnum):
+    """Room permission actions supported by auth checks."""
+
+    VIEW = auto()
+    """The action allows viewing room data."""
+
+    EDIT = auto()
+    """The action allows editing room configuration."""
+
+    REPLAY = auto()
+    """The action allows viewing room replay data."""
+
+    START = auto()
+    """The action allows starting the room assistant."""

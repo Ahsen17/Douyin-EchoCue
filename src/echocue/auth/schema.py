@@ -7,11 +7,14 @@ Schemas describe authentication data boundaries and do not perform database I/O 
 from datetime import datetime
 from uuid import UUID
 
+from msgspec import field
+
 from echocue.base import BaseStruct, CamelizedBaseStruct
 
 from .enum import (
     AccountCertificationStatus,
     OrganizationMemberRole,
+    PermissionAction,
     RoomAuthorizationScope,
     RoomAuthorizationStatus,
     RoomOwnershipKind,
@@ -21,10 +24,15 @@ __all__ = (
     "AccountCertificationStatus",
     "AccountCertificationStruct",
     "AuthSessionVO",
+    "AuthenticationResultStruct",
     "LoginRequest",
     "OrganizationMemberRole",
     "OrganizationMemberStruct",
     "OrganizationStruct",
+    "PermissionAction",
+    "PermissionCheckRequestStruct",
+    "PermissionCheckResultStruct",
+    "PermissionContextStruct",
     "RoomAuthorizationScope",
     "RoomAuthorizationStatus",
     "RoomAuthorizationStruct",
@@ -65,6 +73,7 @@ class AccountCertificationStruct(BaseStruct):
     """Certification state bound to a platform account."""
 
     user_id: UUID
+    id: UUID | None = None
     status: AccountCertificationStatus = AccountCertificationStatus.UNCERTIFIED
     organization_id: UUID | None = None
     certified_at: datetime | None = None
@@ -77,6 +86,7 @@ class OrganizationStruct(BaseStruct):
 
     name: str
     owner_user_id: UUID
+    id: UUID | None = None
     description: str | None = None
     is_active: bool = True
 
@@ -86,6 +96,7 @@ class OrganizationMemberStruct(BaseStruct):
 
     organization_id: UUID
     user_id: UUID
+    id: UUID | None = None
     role: OrganizationMemberRole = OrganizationMemberRole.MEMBER
     is_active: bool = True
 
@@ -94,6 +105,7 @@ class RoomStruct(BaseStruct):
     """Live room ownership record."""
 
     room_id: str
+    id: UUID | None = None
     room_kind: RoomOwnershipKind = RoomOwnershipKind.PERSONAL
     owner_user_id: UUID | None = None
     organization_id: UUID | None = None
@@ -106,6 +118,7 @@ class RoomAuthorizationStruct(BaseStruct):
     room_id: str
     organization_id: UUID
     user_id: UUID
+    id: UUID | None = None
     access_scope: RoomAuthorizationScope = RoomAuthorizationScope.VIEW
     status: RoomAuthorizationStatus = RoomAuthorizationStatus.ACTIVE
     granted_by_user_id: UUID | None = None
@@ -125,3 +138,37 @@ class AuthSessionVO(CamelizedBaseStruct):
 
     expires_in: int
     user: UserVO
+
+
+class PermissionContextStruct(BaseStruct):
+    """Permission context returned by auth services."""
+
+    user: UserStruct
+    certification: AccountCertificationStruct | None = None
+    organizations: list[OrganizationStruct] = field(default_factory=list)
+    memberships: list[OrganizationMemberStruct] = field(default_factory=list)
+    rooms: list[RoomStruct] = field(default_factory=list)
+    room_authorizations: list[RoomAuthorizationStruct] = field(default_factory=list)
+
+
+class AuthenticationResultStruct(BaseStruct):
+    """Authentication result with full permission context."""
+
+    user: UserStruct
+    context: PermissionContextStruct
+
+
+class PermissionCheckRequestStruct(BaseStruct):
+    """Room permission check request."""
+
+    user_id: UUID
+    room_id: str
+    action: PermissionAction
+
+
+class PermissionCheckResultStruct(BaseStruct):
+    """Room permission check result."""
+
+    allowed: bool
+    reason: str
+    matched_scope: RoomAuthorizationScope | None = None

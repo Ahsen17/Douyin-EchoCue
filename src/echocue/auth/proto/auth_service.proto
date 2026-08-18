@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package echocue.auth;
+
+service AuthService {
+  rpc Authenticate(AuthenticateRequest) returns (AuthenticateResponse);
+  rpc GetPermissionContext(PermissionContextRequest) returns (PermissionContextResponse);
+  rpc CheckPermission(PermissionCheckRequest) returns (PermissionCheckResponse);
+}
+
+enum CertificationStatus {
+  CERTIFICATION_STATUS_UNSPECIFIED = 0;
+  CERTIFICATION_STATUS_UNCERTIFIED = 1;
+  CERTIFICATION_STATUS_PERSONAL_CERTIFIED = 2;
+  CERTIFICATION_STATUS_ORGANIZATION_CERTIFIED = 3;
+}
+
+enum OrganizationMemberRole {
+  ORGANIZATION_MEMBER_ROLE_UNSPECIFIED = 0;
+  ORGANIZATION_MEMBER_ROLE_OWNER = 1;
+  ORGANIZATION_MEMBER_ROLE_ADMIN = 2;
+  ORGANIZATION_MEMBER_ROLE_MEMBER = 3;
+  ORGANIZATION_MEMBER_ROLE_VIEWER = 4;
+}
+
+enum RoomOwnershipKind {
+  ROOM_OWNERSHIP_KIND_UNSPECIFIED = 0;
+  ROOM_OWNERSHIP_KIND_PERSONAL = 1;
+  ROOM_OWNERSHIP_KIND_ORGANIZATION = 2;
+}
+
+enum RoomAuthorizationStatus {
+  ROOM_AUTHORIZATION_STATUS_UNSPECIFIED = 0;
+  ROOM_AUTHORIZATION_STATUS_PENDING = 1;
+  ROOM_AUTHORIZATION_STATUS_ACTIVE = 2;
+  ROOM_AUTHORIZATION_STATUS_REVOKED = 3;
+}
+
+enum RoomAuthorizationScope {
+  ROOM_AUTHORIZATION_SCOPE_UNSPECIFIED = 0;
+  ROOM_AUTHORIZATION_SCOPE_VIEW = 1;
+  ROOM_AUTHORIZATION_SCOPE_CONFIGURE = 2;
+  ROOM_AUTHORIZATION_SCOPE_REPLAY = 3;
+  ROOM_AUTHORIZATION_SCOPE_START = 4;
+}
+
+enum PermissionAction {
+  PERMISSION_ACTION_UNSPECIFIED = 0;
+  PERMISSION_ACTION_VIEW = 1;
+  PERMISSION_ACTION_EDIT = 2;
+  PERMISSION_ACTION_REPLAY = 3;
+  PERMISSION_ACTION_START = 4;
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  bool is_active = 4;
+  bool is_superuser = 5;
+}
+
+message AccountCertification {
+  string id = 1;
+  string user_id = 2;
+  CertificationStatus status = 3;
+  string organization_id = 4;
+  string certified_at = 5;
+  string revoked_at = 6;
+  string note = 7;
+}
+
+message Organization {
+  string id = 1;
+  string name = 2;
+  string owner_user_id = 3;
+  string description = 4;
+  bool is_active = 5;
+}
+
+message OrganizationMember {
+  string id = 1;
+  string organization_id = 2;
+  string user_id = 3;
+  OrganizationMemberRole role = 4;
+  bool is_active = 5;
+}
+
+message Room {
+  string id = 1;
+  string room_id = 2;
+  RoomOwnershipKind room_kind = 3;
+  string owner_user_id = 4;
+  string organization_id = 5;
+  bool is_active = 6;
+}
+
+message RoomAuthorization {
+  string id = 1;
+  string room_id = 2;
+  string organization_id = 3;
+  string user_id = 4;
+  RoomAuthorizationScope access_scope = 5;
+  RoomAuthorizationStatus status = 6;
+  string granted_by_user_id = 7;
+  string expires_at = 8;
+  string note = 9;
+}
+
+message PermissionContext {
+  User user = 1;
+  AccountCertification certification = 2;
+  repeated Organization organizations = 3;
+  repeated OrganizationMember memberships = 4;
+  repeated Room rooms = 5;
+  repeated RoomAuthorization room_authorizations = 6;
+}
+
+message AuthenticateRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message AuthenticateResponse {
+  User user = 1;
+  PermissionContext context = 2;
+}
+
+message PermissionContextRequest {
+  string user_id = 1;
+}
+
+message PermissionContextResponse {
+  PermissionContext context = 1;
+}
+
+message PermissionCheckRequest {
+  string user_id = 1;
+  string room_id = 2;
+  PermissionAction action = 3;
+}
+
+message PermissionCheckResponse {
+  bool allowed = 1;
+  string reason = 2;
+  RoomAuthorizationScope matched_scope = 3;
+}
