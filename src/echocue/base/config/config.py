@@ -11,6 +11,7 @@ from .auth import AuthConfig
 from .constants import BASE_DIR
 from .embedding import EmbeddingConfig
 from .lexicon import LexiconConfig
+from .llm import LLMConfig
 from .logging import LoggingConfig
 from .qdrant import QdrantConfig
 from .redis import RedisConfig
@@ -25,12 +26,15 @@ class Config(BaseStruct):
 
     app: AppConfig = field(default_factory=AppConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
+    auth: AuthConfig = field(default_factory=AuthConfig)
+
     redis: RedisConfig = field(default_factory=RedisConfig)
     qdrant: QdrantConfig = field(default_factory=QdrantConfig)
     alchemy: AlchemyConfig = field(default_factory=AlchemyConfig)
-    auth: AuthConfig = field(default_factory=AuthConfig)
+
     lexicon: LexiconConfig = field(default_factory=LexiconConfig)
 
+    llm: LLMConfig = field(default_factory=LLMConfig)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
 
     @classmethod
