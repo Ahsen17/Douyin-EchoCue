@@ -2,6 +2,7 @@
 
 import json
 from datetime import UTC, datetime
+from typing import Any
 
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import StructuredMessage, TextMessage
@@ -48,7 +49,7 @@ class AutoGenReplyAgent:
     def __init__(self, agent: AssistantAgent) -> None:
         self._agent = agent
 
-    async def generate(self, correction_context: dict[str, object] | None = None) -> object:
+    async def generate(self, correction_context: dict[str, Any] | None = None) -> Any:
         """Run the agent with either the initial task or the latest correction request."""
 
         messages_before_run = await self._agent.model_context.get_messages()
@@ -72,7 +73,7 @@ class AutoGenReplyAgent:
             case _:
                 raise RuntimeError("ReplyAgent returned an unsupported message type.")
 
-    def _build_task(self, correction_context: dict[str, object] | None) -> str:
+    def _build_task(self, correction_context: dict[str, Any] | None) -> str:
         if correction_context is None:
             return _INITIAL_TASK
 
@@ -169,7 +170,7 @@ class WorkflowReplyHandler:
             completed_at=generated_at or datetime.now(UTC),
         )
 
-    def _validate_output(self, raw_output: object) -> ReplyAgentOutput:
+    def _validate_output(self, raw_output: Any) -> ReplyAgentOutput:
         if isinstance(raw_output, str):
             return ReplyAgentOutput.model_validate_json(raw_output)
         if isinstance(raw_output, BaseModel):

@@ -83,7 +83,7 @@ def _set_nested_value(data: dict[str, Any], path: tuple[str, ...], value: Any) -
     target[path[-1]] = value
 
 
-def _parse_env_value(env_name: str, raw_value: str, value_type: type[Any]) -> object:
+def _parse_env_value(env_name: str, raw_value: str, value_type: type[Any]) -> Any:
     if value_type is bool:
         normalized = raw_value.strip().lower()
         if normalized in {"1", "true", "yes", "on"}:

@@ -2,6 +2,7 @@
 
 import json
 from datetime import UTC, datetime
+from typing import Any
 
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import StructuredMessage, TextMessage
@@ -49,7 +50,7 @@ class AutoGenInterestAgent:
     def __init__(self, agent: AssistantAgent) -> None:
         self._agent = agent
 
-    async def generate(self, correction_context: dict[str, object] | None = None) -> object:
+    async def generate(self, correction_context: dict[str, Any] | None = None) -> Any:
         """Run the agent with either the initial task or the latest correction request."""
 
         messages_before_run = await self._agent.model_context.get_messages()
@@ -73,7 +74,7 @@ class AutoGenInterestAgent:
             case _:
                 raise RuntimeError("InterestAgent returned an unsupported message type.")
 
-    def _build_task(self, correction_context: dict[str, object] | None) -> str:
+    def _build_task(self, correction_context: dict[str, Any] | None) -> str:
         if correction_context is None:
             return _INITIAL_TASK
 
@@ -175,7 +176,7 @@ class WorkflowInterestHandler:
             },
         )
 
-    def _validate_output(self, raw_output: object, data: InterestAgentInputStruct) -> InterestAgentOutput:
+    def _validate_output(self, raw_output: Any, data: InterestAgentInputStruct) -> InterestAgentOutput:
         if isinstance(raw_output, str):
             result = InterestAgentOutput.model_validate_json(raw_output)
         elif isinstance(raw_output, BaseModel):

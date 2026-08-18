@@ -1,7 +1,7 @@
 """Semantic classification boundaries for live interaction lexicons."""
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import anyio
 import structlog
@@ -270,7 +270,7 @@ class QdrantSemanticClassificationClient:
         comments: list[SemanticClassificationCommentStruct],
     ) -> list[SemanticClassificationCandidateStruct]:
         candidate_results: list[SemanticClassificationCandidateStruct | None] = [None] * len(comments)
-        task_handles: list[object] = []
+        task_handles: list[Any] = []
 
         async def classify_comment(index: int, comment: SemanticClassificationCommentStruct) -> None:
             candidate_results[index] = await self._classify_comment(comment)

@@ -1,6 +1,7 @@
 """Workflow persistence models."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from advanced_alchemy.types import GUID, DateTimeUTC, JsonB
@@ -50,11 +51,11 @@ class WorkflowRuns(CustomModel[WorkflowRunStruct]):
     global_rule_version: Mapped[int | None] = mapped_column(nullable=True)
     organization_rule_version: Mapped[int | None] = mapped_column(nullable=True)
     room_rule_version: Mapped[int | None] = mapped_column(nullable=True)
-    comment_window_stage: Mapped[dict[str, object] | None] = mapped_column(JsonB, nullable=True)
-    trigger_evaluation_stage: Mapped[dict[str, object] | None] = mapped_column(JsonB, nullable=True)
-    persona_context_stage: Mapped[dict[str, object] | None] = mapped_column(JsonB, nullable=True)
-    semantic_classification_stage: Mapped[dict[str, object] | None] = mapped_column(JsonB, nullable=True)
-    interest_stage: Mapped[dict[str, object] | None] = mapped_column(JsonB, nullable=True)
-    reply_stage: Mapped[dict[str, object] | None] = mapped_column(JsonB, nullable=True)
-    review_stage: Mapped[dict[str, object] | None] = mapped_column(JsonB, nullable=True)
-    client_delivery_stage: Mapped[dict[str, object] | None] = mapped_column(JsonB, nullable=True)
+    comment_window_stage: Mapped[dict[str, Any] | None] = mapped_column(JsonB, nullable=True)
+    trigger_evaluation_stage: Mapped[dict[str, Any] | None] = mapped_column(JsonB, nullable=True)
+    persona_context_stage: Mapped[dict[str, Any] | None] = mapped_column(JsonB, nullable=True)
+    semantic_classification_stage: Mapped[dict[str, Any] | None] = mapped_column(JsonB, nullable=True)
+    interest_stage: Mapped[dict[str, Any] | None] = mapped_column(JsonB, nullable=True)
+    reply_stage: Mapped[dict[str, Any] | None] = mapped_column(JsonB, nullable=True)
+    review_stage: Mapped[dict[str, Any] | None] = mapped_column(JsonB, nullable=True)
+    client_delivery_stage: Mapped[dict[str, Any] | None] = mapped_column(JsonB, nullable=True)

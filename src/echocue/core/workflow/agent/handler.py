@@ -3,6 +3,7 @@
 import json
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
+from typing import Any
 
 from autogen_core.models import AssistantMessage, LLMMessage
 from pydantic import ValidationError
@@ -21,7 +22,7 @@ __all__ = (
 class WorkflowAgentInvocationError(ApplicationError):
     """Structured output parsing failure with the model's raw response."""
 
-    def __init__(self, raw_output: object | None, cause: ValidationError) -> None:
+    def __init__(self, raw_output: Any | None, cause: ValidationError) -> None:
         """Initialize the parsing failure details."""
 
         self.raw_output = raw_output
@@ -47,8 +48,8 @@ class WorkflowAgentAttemptRunner[OutputT: BaseModel]:
 
     async def run(
         self,
-        generate: Callable[[dict[str, object] | None], Awaitable[object]],
-        validate_output: Callable[[object], OutputT],
+        generate: Callable[[dict[str, Any] | None], Awaitable[Any]],
+        validate_output: Callable[[Any], OutputT],
         *,
         max_attempts: int,
         occurred_at: datetime | None,
@@ -56,7 +57,7 @@ class WorkflowAgentAttemptRunner[OutputT: BaseModel]:
         """Run attempts until a validated result is produced or attempts are exhausted."""
 
         attempts: list[WorkflowStageAttemptStruct] = []
-        correction_context: dict[str, object] | None = None
+        correction_context: dict[str, Any] | None = None
 
         for attempt_index in range(1, max(max_attempts, 1) + 1):
             result, attempt = await self._run_attempt(
@@ -79,15 +80,15 @@ class WorkflowAgentAttemptRunner[OutputT: BaseModel]:
 
     async def _run_attempt(
         self,
-        generate: Callable[[dict[str, object] | None], Awaitable[object]],
-        validate_output: Callable[[object], OutputT],
+        generate: Callable[[dict[str, Any] | None], Awaitable[Any]],
+        validate_output: Callable[[Any], OutputT],
         *,
         attempt_index: int,
-        correction_context: dict[str, object] | None,
+        correction_context: dict[str, Any] | None,
         occurred_at: datetime | None,
     ) -> tuple[OutputT | None, WorkflowStageAttemptStruct]:
         started_at = occurred_at or datetime.now(UTC)
-        raw_output: object | None = None
+        raw_output: Any | None = None
 
         try:
             raw_output = await generate(correction_context)
@@ -148,8 +149,8 @@ class WorkflowAgentAttemptRunner[OutputT: BaseModel]:
         *,
         started_at: datetime,
         completed_at: datetime,
-        correction_context: dict[str, object] | None,
-        raw_output: object | None,
+        correction_context: dict[str, Any] | None,
+        raw_output: Any | None,
         error: dict[str, str] | None = None,
     ) -> WorkflowStageAttemptStruct:
         return WorkflowStageAttemptStruct(
@@ -168,7 +169,7 @@ class WorkflowAgentAttemptRunner[OutputT: BaseModel]:
         )
 
 
-def find_latest_assistant_output(messages: Sequence[LLMMessage]) -> object | None:
+def find_latest_assistant_output(messages: Sequence[LLMMessage]) -> Any | None:
     """Return the latest assistant raw content from an AutoGen model context slice."""
 
     for message in reversed(messages):
@@ -178,7 +179,7 @@ def find_latest_assistant_output(messages: Sequence[LLMMessage]) -> object | Non
     return None
 
 
-def serialize_agent_raw_output(raw_output: object | None) -> object:
+def serialize_agent_raw_output(raw_output: Any | None) -> Any:
     """Convert arbitrary agent output into a JSON-compatible value for stage attempts."""
 
     if isinstance(raw_output, BaseModel):

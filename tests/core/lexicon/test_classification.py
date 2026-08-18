@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import anyio
 import anyio.lowlevel
@@ -76,7 +76,7 @@ class FailingQdrantClient:
 
 
 class SlowCollectionQdrantClient:
-    async def get_collection(self, collection_name: str) -> object:
+    async def get_collection(self, collection_name: str) -> Any:
         await anyio.sleep(1)
         return object()
 

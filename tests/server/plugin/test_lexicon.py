@@ -43,7 +43,7 @@ class FakeQdrantClientFactory:
 
     client: FakeQdrantClient
 
-    def __init__(self, config: object) -> None:
+    def __init__(self, config: Any) -> None:
         self.client = FakeQdrantClient()
 
     def new(self) -> FakeQdrantClient:
@@ -190,7 +190,7 @@ class TestLexiconServeCommand:
                 super().__init__(qdrant_client, collection_name=collection_name)
                 self.created_classifiers.append(tracking_self)
 
-        def create_fake_server(classification_client: object) -> FakeGrpcServer:
+        def create_fake_server(classification_client: Any) -> FakeGrpcServer:
             assert classification_client is self.created_classifiers[0]
             return self.fake_server
 

@@ -9,6 +9,7 @@ __all__ = (
     "WorkflowPersonaContextNotFoundError",
     "WorkflowPersonaContextRoomMismatchError",
     "WorkflowReplyInputRoomMismatchError",
+    "WorkflowReviewInputRoomMismatchError",
     "WorkflowSemanticClassificationRoomMismatchError",
 )
 
@@ -57,6 +58,18 @@ class WorkflowReplyInputRoomMismatchError(ApplicationError):
 
         super().__init__(
             f"ReplyAgent input room {reply_room_id} does not match workflow room {workflow_room_id}.",
+            status_code=HTTP_400_BAD_REQUEST,
+        )
+
+
+class WorkflowReviewInputRoomMismatchError(ApplicationError):
+    """Raised when merge-review input does not belong to the workflow room."""
+
+    def __init__(self, workflow_room_id: str, review_room_id: str) -> None:
+        """Initialize the merge-review input room mismatch error."""
+
+        super().__init__(
+            f"ReviewAgent input room {review_room_id} does not match workflow room {workflow_room_id}.",
             status_code=HTTP_400_BAD_REQUEST,
         )
 

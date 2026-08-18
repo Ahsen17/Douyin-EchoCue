@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import cast
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
@@ -28,11 +28,11 @@ from echocue.core.workflow import (
 class ScriptedReplyAgent(AutoGenReplyAgent):
     """Concrete ReplyAgent test double with scripted raw outputs."""
 
-    def __init__(self, outputs: list[object]) -> None:
+    def __init__(self, outputs: list[Any]) -> None:
         self._outputs = iter(outputs)
-        self.correction_contexts: list[dict[str, object] | None] = []
+        self.correction_contexts: list[dict[str, Any] | None] = []
 
-    async def generate(self, correction_context: dict[str, object] | None = None) -> object:
+    async def generate(self, correction_context: dict[str, Any] | None = None) -> Any:
         """Record correction context and return the next configured raw output."""
 
         self.correction_contexts.append(correction_context)
@@ -193,9 +193,9 @@ class _FakeModelContext:
     """In-memory AutoGen model context used to verify retry message handling."""
 
     def __init__(self) -> None:
-        self.messages: list[object] = []
+        self.messages: list[Any] = []
 
-    async def get_messages(self) -> list[object]:
+    async def get_messages(self) -> list[Any]:
         """Return the current model message history."""
 
         return list(self.messages)
@@ -204,7 +204,7 @@ class _FakeModelContext:
 class _FakeAssistantAgent:
     """Minimal AssistantAgent behavior required by AutoGenReplyAgent tests."""
 
-    def __init__(self, outcomes: list[object]) -> None:
+    def __init__(self, outcomes: list[Any]) -> None:
         self._outcomes = iter(outcomes)
         self.model_context = _FakeModelContext()
         self.tasks: list[TextMessage] = []
@@ -242,7 +242,7 @@ class TestAutoGenReplyAgent:
             ]
         )
         agent = AutoGenReplyAgent(cast("AssistantAgent", fake_agent))
-        correction_context: dict[str, object] = {
+        correction_context: dict[str, Any] = {
             "raw_output": {"comment_display": "主播今天状态太好了", "confidence": 1.2},
             "validation_error": {"type": "ValidationError", "message": "Invalid reply output."},
         }

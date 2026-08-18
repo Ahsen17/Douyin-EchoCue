@@ -24,6 +24,12 @@ __all__ = (
     "ReplyAgentExecutionConfigStruct",
     "ReplyAgentInputStruct",
     "ReplyAgentOutput",
+    "ReviewAgentExecutionConfigStruct",
+    "ReviewAgentInputStruct",
+    "ReviewAgentOutput",
+    "SafetyRuleScanConfigStruct",
+    "SafetyRuleScanResultStruct",
+    "SafetyRuleViolationStruct",
     "WorkflowPersonaContextStruct",
     "WorkflowPushAction",
     "WorkflowRunStruct",
@@ -110,6 +116,68 @@ class ReplyAgentOutput(BaseModel):
     quick_reply: Annotated[str, Field(min_length=1)]
     cue: Annotated[str, Field(min_length=1)]
     confidence: Annotated[float, Field(ge=0, le=1)]
+
+
+class SafetyRuleViolationStruct(BaseStruct):
+    """Single programmatic safety rule violation detected in workflow evidence."""
+
+    risk_category: str
+    rule_id: str
+    matched_text: str
+    evidence_field: str
+    severity: str = "medium"
+
+
+class SafetyRuleScanConfigStruct(BaseStruct):
+    """Programmatic safety scan rule set metadata and keyword rules."""
+
+    global_rule_version: int = 1
+    organization_rule_version: int | None = None
+    room_rule_version: int | None = None
+    prohibited_keywords: dict[str, list[str]] = field(default_factory=dict)
+
+
+class SafetyRuleScanResultStruct(BaseStruct):
+    """Programmatic safety scan result used as evidence for final review."""
+
+    global_rule_version: int
+    organization_rule_version: int | None = None
+    room_rule_version: int | None = None
+    risk_categories: list[str] = field(default_factory=list)
+    violations: list[SafetyRuleViolationStruct] = field(default_factory=list)
+
+
+class ReviewAgentInputStruct(BaseStruct):
+    """Safety evidence and generated reply passed to the merge-review agent."""
+
+    room_id: str
+    persona_context: WorkflowPersonaContextStruct
+    selected_comment: SemanticClassificationCandidateStruct
+    reply: ReplyAgentOutput
+    semantic_type: SemanticType
+    safety_scan: SafetyRuleScanResultStruct
+    recent_push_records: list[dict[str, Any]] = field(default_factory=list)
+
+
+class ReviewAgentExecutionConfigStruct(BaseStruct):
+    """Runtime metadata and retry limits used by the merge-review agent."""
+
+    agent_name: str = "merge_review_agent"
+    max_attempts: int = 3
+    provider_name: str | None = None
+    model_id: str | None = None
+
+
+class ReviewAgentOutput(BaseModel):
+    """Validated merge-review agent output."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    push_action: WorkflowPushAction
+    review_category: Annotated[str, Field(min_length=1)]
+    risk_categories: list[str] = Field(default_factory=list)
+    skip_reason: str | None = None
+    review_note: Annotated[str, Field(min_length=1)]
 
 
 class WorkflowStageAttemptStruct(BaseStruct):
