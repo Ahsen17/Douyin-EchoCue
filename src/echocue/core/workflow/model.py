@@ -14,10 +14,10 @@ from echocue.shared import CustomModel
 from .enum import WorkflowStatus
 from .schema import WorkflowRunStruct
 
-__all__ = ("WorkflowRuns",)
+__all__ = ("WorkflowRunsModel",)
 
 
-class WorkflowRuns(CustomModel[WorkflowRunStruct]):
+class WorkflowRunsModel(CustomModel[WorkflowRunStruct]):
     """Workflow run persistence model."""
 
     __struct_type__ = WorkflowRunStruct
