@@ -169,6 +169,59 @@ class StubReviewHandler(WorkflowReviewHandler):
         return reviewed
 
 
+class StubSkipReviewHandler(WorkflowReviewHandler):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        del args, kwargs
+
+    async def review_workflow_run(
+        self,
+        workflow_run: WorkflowRunStruct,
+        data: ReviewAgentInputStruct,
+        *,
+        reviewed_at: datetime | None = None,
+    ) -> WorkflowRunStruct:
+        started_at = reviewed_at or datetime.now(UTC)
+        reviewed = WorkflowRunStruct.from_dict(workflow_run.to_dict())
+        reviewed.workflow_status = WorkflowStatus.COMPLETED
+        reviewed.push_action = WorkflowPushAction.SKIP
+        reviewed.review_category = "low_reply_quality"
+        reviewed.review_note = "Reply quality is too low to push."
+        reviewed.skip_reason = "low_reply_quality"
+        reviewed.risk_categories = list(data.safety_scan.risk_categories)
+        reviewed.review_stage = WorkflowStageEnvelopeStruct(
+            stage_name=WorkflowStageName.REVIEW_STAGE,
+            started_at=started_at,
+            completed_at=started_at,
+            latency_ms=0,
+            input={
+                **(workflow_run.review_stage.input if workflow_run.review_stage is not None else {}),
+                "review_input": {
+                    "room_id": data.room_id,
+                    "persona_context": data.persona_context.to_dict(),
+                    "selected_comment": data.selected_comment.to_dict(),
+                    "reply": data.reply.model_dump(mode="json"),
+                    "semantic_type": data.semantic_type.value,
+                    "safety_scan": data.safety_scan.to_dict(),
+                    "recent_push_records": data.recent_push_records,
+                },
+            },
+            output={
+                "safety_scan": data.safety_scan.to_dict(),
+                "agent_name": "merge_review_agent",
+                "agent_result": {
+                    "push_action": "skip",
+                    "review_category": "low_reply_quality",
+                    "risk_categories": [],
+                    "skip_reason": "low_reply_quality",
+                    "review_note": "Reply quality is too low to push.",
+                },
+                "fallback_used": False,
+            },
+            attempts=[],
+        )
+        return reviewed
+
+
 def _workflow_input() -> CommentWindowWorkflowInputStruct:
     now = datetime(2026, 8, 18, 12, 0, tzinfo=UTC)
     comments = [
@@ -265,6 +318,23 @@ class TestWorkflowExecutionHandler:
         assert workflow_run.completed_at is not None
         assert len(service.created) == 1
         assert service.created[0]["workflow_status"] == "completed"
+        assert service.created[0]["client_delivery_stage"]["stage_name"] == "client_delivery_stage"
+
+    async def test_runs_full_workflow_to_completed_snapshot_when_review_skips(self) -> None:
+        handler, service = _build_handler()
+        handler._review_handler = StubSkipReviewHandler()
+
+        workflow_run = await handler.run_comment_window_workflow(_workflow_input())
+
+        assert workflow_run.workflow_status is WorkflowStatus.COMPLETED
+        assert workflow_run.push_action is WorkflowPushAction.SKIP
+        assert workflow_run.skip_reason == "low_reply_quality"
+        assert workflow_run.review_stage is not None
+        assert workflow_run.client_delivery_stage is not None
+        assert workflow_run.client_delivery_stage.stage_name is WorkflowStageName.CLIENT_DELIVERY_STAGE
+        assert len(service.created) == 1
+        assert service.created[0]["workflow_status"] == "completed"
+        assert service.created[0]["push_action"] == "skip"
         assert service.created[0]["client_delivery_stage"]["stage_name"] == "client_delivery_stage"
 
     async def test_persists_aborted_snapshot_when_trigger_is_blocked(self) -> None:
