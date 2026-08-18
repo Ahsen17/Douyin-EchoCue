@@ -1,0 +1,147 @@
+@import "@fontsource/noto-sans-sc/400.css";
+@import "@fontsource/noto-sans-sc/700.css";
+
+:root {
+  color: #f6f9fc;
+  font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --overlay-scale: 1.15;
+  --overlay-shell-opacity: 0.92;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 180px;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+#overlay-app {
+  min-height: 100vh;
+}
+
+.overlay-shell {
+  min-height: 100vh;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  padding: 22px 24px 24px;
+  color: #f6f9fc;
+  background: rgb(19 29 40 / var(--overlay-shell-opacity));
+  box-shadow: 0 14px 34px rgba(2, 8, 14, 0.32);
+  font-size: calc(18px * var(--overlay-scale));
+}
+
+[data-theme="light"] .overlay-shell {
+  color: #17212b;
+  border-color: rgba(23, 33, 43, 0.12);
+  background: rgb(255 255 255 / var(--overlay-shell-opacity));
+  box-shadow: 0 14px 34px rgba(23, 33, 43, 0.18);
+}
+
+.overlay-drag-handle {
+  display: flex;
+  min-height: 26px;
+  align-items: center;
+  justify-content: space-between;
+  -webkit-app-region: drag;
+  cursor: move;
+  user-select: none;
+}
+
+.overlay-brand,
+.overlay-label {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.overlay-brand {
+  color: #88bdf4;
+}
+
+[data-theme="light"] .overlay-brand {
+  color: #246bce;
+}
+
+.overlay-brand span {
+  color: #e3a54a;
+}
+
+.overlay-time {
+  color: rgba(232, 239, 245, 0.55);
+  font-size: 12px;
+}
+
+[data-theme="light"] .overlay-time {
+  color: #7a8792;
+}
+
+.overlay-section {
+  min-width: 0;
+}
+
+.overlay-label {
+  display: block;
+  color: rgba(226, 235, 242, 0.56);
+}
+
+[data-theme="light"] .overlay-label {
+  color: #76838e;
+}
+
+.overlay-section p {
+  margin: 10px 0 0;
+  line-height: 1.65;
+}
+
+.overlay-user {
+  color: #fff;
+  font-size: 1em;
+  font-weight: 700;
+}
+
+[data-theme="light"] .overlay-user {
+  color: #17212b;
+}
+
+.overlay-comment {
+  color: #fff;
+  font-size: 1.46em;
+  font-weight: 700;
+}
+
+[data-theme="light"] .overlay-comment {
+  color: #17212b;
+}
+
+.overlay-divider {
+  height: 1px;
+  margin: 18px 0;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="light"] .overlay-divider {
+  background: #e2e7eb;
+}
+
+.overlay-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+}
+
+.overlay-grid p {
+  color: rgba(242, 247, 251, 0.86);
+  font-size: 1.2em;
+  font-weight: 700;
+}
+
+[data-theme="light"] .overlay-grid p {
+  color: #566572;
+}
