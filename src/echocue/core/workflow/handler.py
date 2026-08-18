@@ -5,8 +5,15 @@ from datetime import UTC, datetime
 from typing import Protocol
 
 from .enum import WorkflowStageName
-from .exception import WorkflowPersonaContextNotFoundError
-from .schema import WorkflowPersonaContextStruct, WorkflowRunStruct, WorkflowStageEnvelopeStruct
+from .exception import (
+    WorkflowPersonaContextNotFoundError,
+    WorkflowPersonaContextRoomMismatchError,
+)
+from .schema import (
+    WorkflowPersonaContextStruct,
+    WorkflowRunStruct,
+    WorkflowStageEnvelopeStruct,
+)
 
 __all__ = (
     "StaticWorkflowPersonaContextResolver",
@@ -23,7 +30,7 @@ class WorkflowPersonaContextResolver(Protocol):
 
 
 class StaticWorkflowPersonaContextResolver:
-    """Deterministic persona context resolver used for local tests."""
+    """Deterministic in-memory persona context resolver for local adapters and tests."""
 
     def __init__(self, contexts: Mapping[str, WorkflowPersonaContextStruct]) -> None:
         self._contexts = dict(contexts)
@@ -57,6 +64,9 @@ class WorkflowPersonaContextHandler:
         frozen_at: datetime | None = None,
     ) -> WorkflowRunStruct:
         """Freeze persona identity and version into a workflow run snapshot."""
+
+        if workflow_run.room_id != persona_context.room_id:
+            raise WorkflowPersonaContextRoomMismatchError(workflow_run.room_id, persona_context.room_id)
 
         frozen = WorkflowRunStruct.from_dict(workflow_run.to_dict())
         resolved_at = frozen_at or persona_context.published_at or datetime.now(UTC)

@@ -8,6 +8,7 @@ from echocue.core.workflow import (
     StaticWorkflowPersonaContextResolver,
     WorkflowPersonaContextHandler,
     WorkflowPersonaContextNotFoundError,
+    WorkflowPersonaContextRoomMismatchError,
     WorkflowPersonaContextStruct,
     WorkflowRunStruct,
     WorkflowStageName,
@@ -77,3 +78,24 @@ class TestWorkflowPersonaContextHandler:
             UUID("00000000-0000-7000-8000-000000000001")
         )
         assert frozen.persona_context_stage.output["persona_version"] == 3
+
+    def test_rejects_persona_context_from_a_different_room(self) -> None:
+        frozen_at = datetime(2026, 8, 18, 12, 0, tzinfo=UTC)
+        persona_context = WorkflowPersonaContextStruct(
+            room_id="room-b",
+            persona_id=UUID("00000000-0000-7000-8000-000000000002"),
+            persona_version=7,
+            published_at=frozen_at,
+            persona_name="Other host",
+            persona_summary="Different room.",
+        )
+        workflow_run = WorkflowRunStruct(room_id="room-a")
+        handler = WorkflowPersonaContextHandler(
+            StaticWorkflowPersonaContextResolver({"room-b": persona_context})
+        )
+
+        with pytest.raises(WorkflowPersonaContextRoomMismatchError) as exc_info:
+            handler.freeze_workflow_run(workflow_run, persona_context, frozen_at=frozen_at)
+
+        assert "room-a" in exc_info.value.message
+        assert "room-b" in exc_info.value.message

@@ -6,7 +6,7 @@ from .enum import (
     WorkflowStatus,
     WorkflowTriggerType,
 )
-from .exception import WorkflowPersonaContextNotFoundError
+from .exception import WorkflowPersonaContextNotFoundError, WorkflowPersonaContextRoomMismatchError
 from .handler import (
     StaticWorkflowPersonaContextResolver,
     WorkflowPersonaContextHandler,
@@ -32,6 +32,7 @@ __all__ = (
     "WorkflowPersonaContextHandler",
     "WorkflowPersonaContextNotFoundError",
     "WorkflowPersonaContextResolver",
+    "WorkflowPersonaContextRoomMismatchError",
     "WorkflowPersonaContextStruct",
     "WorkflowPushAction",
     "WorkflowRunService",
