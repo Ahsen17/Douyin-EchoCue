@@ -94,22 +94,22 @@ uv run app database check
 构建并启动服务：
 
 ```bash
-make compose-build
-make compose-up
+make compose build
+make compose up
 ```
 
 启动或操作单个服务：
 
 ```bash
-make compose-up SERVICE=postgres
-make compose-build SERVICE=app
-make compose-logs SERVICE=app
+make compose up postgres
+make compose build app
+make compose logs app
 ```
 
 停止服务：
 
 ```bash
-make compose-down
+make compose down
 ```
 
 Compose 中的 app 服务会基于 `Dockerfile` 构建本地镜像，数据库服务直接使用 PostgreSQL 镜像。
