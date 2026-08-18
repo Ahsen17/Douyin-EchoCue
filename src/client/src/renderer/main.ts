@@ -3,6 +3,7 @@ import { getMockPush, loadRooms, signIn, startRuntime, stopRuntime } from "./moc
 import {
   initialState,
   type ClientState,
+  type OverlayTheme,
   type Room,
   type RuntimeStatus,
 } from "./state";
@@ -189,6 +190,63 @@ function renderWorkspace(): string {
             ${state.lastPush ? renderPush(state.lastPush) : renderPushEmpty()}
           </section>
         </section>
+        <button
+          class="drawer-fab ${state.overlayDrawerOpen ? "is-open" : ""}"
+          data-action="toggle-overlay-drawer"
+          type="button"
+          title="${state.overlayDrawerOpen ? "收起抽屉" : "展开抽屉"}"
+          aria-label="${state.overlayDrawerOpen ? "收起抽屉" : "展开抽屉"}"
+        >
+          ${state.overlayDrawerOpen ? "›" : "‹"}
+        </button>
+        <aside class="control-drawer ${state.overlayDrawerOpen ? "is-open" : "is-collapsed"}" aria-label="浮窗控制抽屉">
+          <div class="drawer-shell">
+            <div class="drawer-heading">
+              <div class="drawer-title">
+                <p class="panel-kicker">浮窗</p>
+                <h2>控制抽屉</h2>
+              </div>
+              <button class="icon-button drawer-toggle" data-action="toggle-overlay-drawer" title="${state.overlayDrawerOpen ? "收起抽屉" : "展开抽屉"}" aria-label="${state.overlayDrawerOpen ? "收起抽屉" : "展开抽屉"}">${state.overlayDrawerOpen ? "‹" : "›"}</button>
+            </div>
+            <div class="drawer-body">
+              <div class="surface-heading drawer-status">
+                <div>
+                  <h3>浮窗控制</h3>
+                  <p>显示、样式和交互切换</p>
+                </div>
+                <span class="status-badge ${state.overlay.isVisible ? "tone-green" : "tone-neutral"}">${state.overlay.isVisible ? "已显示" : "已隐藏"}</span>
+              </div>
+              <div class="overlay-controls">
+                <button class="button button-primary" data-action="toggle-overlay" ${!state.lastPush ? "disabled" : ""}>
+                  <span>${state.overlay.isVisible ? "隐藏浮窗" : "显示浮窗"}</span>
+                  <span aria-hidden="true">${state.overlay.isVisible ? "□" : "▣"}</span>
+                </button>
+                <button class="button button-secondary" data-action="toggle-overlay-top" ${!state.overlay.isVisible ? "disabled" : ""}>
+                  <span>${state.overlay.alwaysOnTop ? "取消置顶" : "保持置顶"}</span>
+                </button>
+                <button class="button button-secondary" data-action="toggle-overlay-click" ${!state.overlay.isVisible ? "disabled" : ""}>
+                  <span>${state.overlay.clickThrough ? "恢复点击" : "点击穿透"}</span>
+                </button>
+                <button class="button button-secondary" data-action="toggle-overlay-theme" ${!state.overlay.isVisible ? "disabled" : ""}>
+                  <span>${state.overlay.theme === "dark" ? "浅色主题" : "深色主题"}</span>
+                </button>
+              </div>
+              <div class="overlay-sliders">
+                <label>
+                  <span>透明度</span>
+                  <input type="range" min="0.35" max="1" step="0.005" value="${state.overlay.opacity}" data-action="set-overlay-opacity" ${!state.overlay.isVisible ? "disabled" : ""} />
+                  <strong data-value="overlay-opacity">${Math.round(state.overlay.opacity * 100)}%</strong>
+                </label>
+                <label>
+                  <span>字号</span>
+                  <input type="range" min="0.85" max="1.35" step="0.01" value="${state.overlay.fontScale}" data-action="set-overlay-font" ${!state.overlay.isVisible ? "disabled" : ""} />
+                  <strong data-value="overlay-font">${Math.round(state.overlay.fontScale * 100)}%</strong>
+                </label>
+              </div>
+              <p class="overlay-hint">拖动浮窗顶部栏可调整位置；点击穿透开启后，鼠标会直接作用到下层窗口。</p>
+            </div>
+          </div>
+        </aside>
       </div>
     </main>
   `;
@@ -240,13 +298,23 @@ function renderPushEmpty(): string {
 
 function bindEvents(): void {
   root.querySelectorAll<HTMLElement>("[data-action]").forEach((element) => {
+    if (element instanceof HTMLInputElement && element.type === "range") {
+      element.addEventListener("input", () => {
+        void handleSliderInput(element.dataset.action ?? "", element.value, element);
+      });
+      element.addEventListener("change", () => {
+        render();
+      });
+      return;
+    }
+
     element.addEventListener("click", () => {
       void handleAction(element.dataset.action ?? "", element.dataset.roomId);
     });
   });
 }
 
-async function handleAction(action: string, roomId?: string): Promise<void> {
+async function handleAction(action: string, roomId?: string, value?: string): Promise<void> {
   if (action === "sign-in") {
     state = { ...state, isLoading: true, errorMessage: null };
     render();
@@ -268,6 +336,7 @@ async function handleAction(action: string, roomId?: string): Promise<void> {
   }
 
   if (action === "sign-out") {
+    await window.echocue.overlay.close();
     state = structuredClone(initialState);
     pushIndex = 0;
     render();
@@ -296,11 +365,39 @@ async function handleAction(action: string, roomId?: string): Promise<void> {
 
   if (action === "next-push" && state.runtimeStatus === "running") {
     state = { ...state, lastPush: getMockPush(pushIndex++) };
+    await syncOverlayContent();
     render();
+    return;
+  }
+
+  if (action === "toggle-overlay-drawer") {
+    state = { ...state, overlayDrawerOpen: !state.overlayDrawerOpen, errorMessage: null };
+    render();
+    return;
+  }
+
+  if (action === "toggle-overlay") {
+    await toggleOverlay();
+    return;
+  }
+
+  if (action === "toggle-overlay-top") {
+    await setOverlayAlwaysOnTop(!state.overlay.alwaysOnTop);
+    return;
+  }
+
+  if (action === "toggle-overlay-click") {
+    await setOverlayClickThrough(!state.overlay.clickThrough);
+    return;
+  }
+
+  if (action === "toggle-overlay-theme") {
+    await setOverlayTheme(state.overlay.theme === "dark" ? "light" : "dark");
+    return;
   }
 
   if (action === "show-settings") {
-    state = { ...state, errorMessage: "展示设置将在 M6 Stage 4 提供，本阶段保留主窗口流程。" };
+    state = { ...state, overlayDrawerOpen: true, errorMessage: null };
     render();
   }
 }
@@ -346,6 +443,8 @@ async function startRuntimeFlow(): Promise<void> {
       runtimeMessage: "辅助服务运行中",
       lastPush: getMockPush(pushIndex++),
     };
+    await openOverlayIfNeeded();
+    await syncOverlayContent();
   } catch {
     state = { ...state, runtimeStatus: "error", runtimeMessage: "启动失败，请重试。", errorMessage: "mock 运行服务启动失败。" };
   }
@@ -356,7 +455,13 @@ async function stopRuntimeFlow(): Promise<void> {
   state = { ...state, runtimeStatus: "paused", runtimeMessage: "正在停止本地辅助服务..." };
   render();
   await stopRuntime();
-  state = { ...state, runtimeStatus: "idle", runtimeMessage: "已停止，等待下一次启动。" };
+  await window.echocue.overlay.close();
+  state = {
+    ...state,
+    runtimeStatus: "idle",
+    runtimeMessage: "已停止，等待下一次启动。",
+    overlay: { ...state.overlay, isVisible: false },
+  };
   render();
 }
 
@@ -378,4 +483,114 @@ function formatNumber(value: number): string {
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character] ?? character);
+}
+
+async function toggleOverlay(): Promise<void> {
+  if (!state.lastPush) {
+    state = { ...state, errorMessage: "暂无可展示的浮窗内容，请先启动辅助服务或模拟新消息。" };
+    render();
+    return;
+  }
+
+  if (state.overlay.isVisible) {
+    await window.echocue.overlay.hide();
+    state = { ...state, overlay: { ...state.overlay, isVisible: false } };
+  } else {
+    await window.echocue.overlay.open(state.lastPush);
+    await syncOverlaySettings();
+    state = { ...state, overlay: { ...state.overlay, isVisible: true }, errorMessage: null };
+  }
+  render();
+}
+
+async function syncOverlayContent(): Promise<void> {
+  if (state.overlay.isVisible && state.lastPush) {
+    await window.echocue.overlay.update(state.lastPush);
+  }
+}
+
+async function openOverlayIfNeeded(): Promise<void> {
+  if (state.overlay.isVisible || !state.lastPush) {
+    return;
+  }
+
+  await window.echocue.overlay.open(state.lastPush);
+  await syncOverlaySettings();
+  state = { ...state, overlay: { ...state.overlay, isVisible: true }, errorMessage: null };
+}
+
+async function syncOverlaySettings(): Promise<void> {
+  await Promise.all([
+    window.echocue.overlay.setAlwaysOnTop(state.overlay.alwaysOnTop),
+    window.echocue.overlay.setOpacity(state.overlay.opacity),
+    window.echocue.overlay.setIgnoreMouseEvents(state.overlay.clickThrough),
+    window.echocue.overlay.setFontScale(state.overlay.fontScale),
+    window.echocue.overlay.setTheme(state.overlay.theme),
+  ]);
+}
+
+async function setOverlayAlwaysOnTop(alwaysOnTop: boolean): Promise<void> {
+  await window.echocue.overlay.setAlwaysOnTop(alwaysOnTop);
+  state = { ...state, overlay: { ...state.overlay, alwaysOnTop } };
+  render();
+}
+
+async function setOverlayClickThrough(clickThrough: boolean): Promise<void> {
+  await window.echocue.overlay.setIgnoreMouseEvents(clickThrough);
+  state = { ...state, overlay: { ...state.overlay, clickThrough } };
+  render();
+}
+
+async function setOverlayTheme(theme: OverlayTheme): Promise<void> {
+  await window.echocue.overlay.setTheme(theme);
+  state = { ...state, overlay: { ...state.overlay, theme } };
+  render();
+}
+
+async function setOverlayOpacity(opacity: number): Promise<void> {
+  if (Number.isNaN(opacity)) {
+    return;
+  }
+  await window.echocue.overlay.setOpacity(opacity);
+  state = { ...state, overlay: { ...state.overlay, opacity } };
+  render();
+}
+
+async function setOverlayFontScale(fontScale: number): Promise<void> {
+  if (Number.isNaN(fontScale)) {
+    return;
+  }
+  await window.echocue.overlay.setFontScale(fontScale);
+  state = { ...state, overlay: { ...state.overlay, fontScale } };
+  render();
+}
+
+async function handleSliderInput(action: string, value: string, element: HTMLInputElement): Promise<void> {
+  if (action === "set-overlay-opacity") {
+    const opacity = Number.parseFloat(value);
+    if (Number.isNaN(opacity)) {
+      return;
+    }
+    void window.echocue.overlay.setOpacity(opacity);
+    state = { ...state, overlay: { ...state.overlay, opacity } };
+    updateSliderValue(element, `${Math.round(opacity * 100)}%`);
+    return;
+  }
+
+  if (action === "set-overlay-font") {
+    const fontScale = Number.parseFloat(value);
+    if (Number.isNaN(fontScale)) {
+      return;
+    }
+    void window.echocue.overlay.setFontScale(fontScale);
+    state = { ...state, overlay: { ...state.overlay, fontScale } };
+    updateSliderValue(element, `${Math.round(fontScale * 100)}%`);
+  }
+}
+
+function updateSliderValue(element: HTMLInputElement, text: string): void {
+  const label = element.parentElement?.querySelector<HTMLElement>("[data-value]");
+  if (label) {
+    label.textContent = text;
+  }
 }

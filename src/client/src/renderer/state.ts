@@ -4,6 +4,8 @@ export type RuntimeStatus = "idle" | "starting" | "running" | "paused" | "error"
 
 export type RoomStatus = "live" | "offline";
 
+export type OverlayTheme = "light" | "dark";
+
 export interface Account {
   displayName: string;
   accountType: "主播" | "运营";
@@ -25,6 +27,15 @@ export interface PushPreview {
   createdAt: string;
 }
 
+export interface OverlayConfig {
+  isVisible: boolean;
+  alwaysOnTop: boolean;
+  clickThrough: boolean;
+  opacity: number;
+  fontScale: number;
+  theme: OverlayTheme;
+}
+
 export interface ClientState {
   screen: ClientScreen;
   isLoading: boolean;
@@ -35,6 +46,8 @@ export interface ClientState {
   runtimeStatus: RuntimeStatus;
   runtimeMessage: string;
   lastPush: PushPreview | null;
+  overlay: OverlayConfig;
+  overlayDrawerOpen: boolean;
 }
 
 export const initialState: ClientState = {
@@ -47,5 +60,13 @@ export const initialState: ClientState = {
   runtimeStatus: "idle",
   runtimeMessage: "尚未启动",
   lastPush: null,
+  overlay: {
+    isVisible: false,
+    alwaysOnTop: true,
+    clickThrough: false,
+    opacity: 0.94,
+    fontScale: 1,
+    theme: "dark",
+  },
+  overlayDrawerOpen: false,
 };
-
