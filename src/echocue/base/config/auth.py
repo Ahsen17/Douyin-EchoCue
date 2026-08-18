@@ -9,6 +9,12 @@ __all__ = ("AuthConfig",)
 class AuthConfig(BaseStruct):
     """Authentication configuration."""
 
+    grpc_enabled: bool = False
+    grpc_target: str = "127.0.0.1:50052"
+    grpc_timeout: float = 1.0
+    grpc_host: str = "127.0.0.1"
+    grpc_port: int = 50052
+
     session_cookie_key: str = "session"
     session_max_age_seconds: int = 3600
     session_renew_on_access: bool = True
