@@ -27,6 +27,7 @@ from .exception import (
 )
 from .handler import (
     StaticWorkflowPersonaContextResolver,
+    WorkflowExecutionHandler,
     WorkflowPersonaContextHandler,
     WorkflowPersonaContextResolver,
     WorkflowSafetyRuleScanner,
@@ -79,6 +80,7 @@ __all__ = (
     "SafetyRuleScanResultStruct",
     "SafetyRuleViolationStruct",
     "StaticWorkflowPersonaContextResolver",
+    "WorkflowExecutionHandler",
     "WorkflowInterestHandler",
     "WorkflowInterestInputRoomMismatchError",
     "WorkflowPersonaContextHandler",

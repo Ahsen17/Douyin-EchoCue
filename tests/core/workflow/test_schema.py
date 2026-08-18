@@ -26,7 +26,7 @@ class TestWorkflowSchema:
         assert WorkflowPushAction.PUSH.value == "push"
         assert WorkflowStageName.COMMENT_WINDOW_STAGE.value == "comment_window_stage"
 
-    def test_workflow_status_transition_rules_match_m3_plan(self) -> None:
+    def test_workflow_status_transition_rules(self) -> None:
         assert is_valid_workflow_status_transition(WorkflowStatus.PENDING, WorkflowStatus.RUNNING) is True
         assert is_valid_workflow_status_transition(WorkflowStatus.PENDING, WorkflowStatus.FAILED) is True
         assert is_valid_workflow_status_transition(WorkflowStatus.RUNNING, WorkflowStatus.COMPLETED) is True
