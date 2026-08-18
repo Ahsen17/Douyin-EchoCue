@@ -4,6 +4,7 @@ import frontmatter
 from autogen_agentchat.agents import AssistantAgent
 from autogen_core.models import ChatCompletionClient
 from autogen_ext.models.openai import OpenAIChatCompletionClient
+from pydantic import BaseModel
 
 from echocue.base import BaseStruct, Config
 from echocue.shared.encoder import Jinja2Encoder
@@ -19,7 +20,6 @@ class _Frontmatter(BaseStruct):
 
     name: str
     description: str
-    instructions: str
 
     privoder: str | None = None
     model_id: str | None = None
@@ -35,6 +35,7 @@ class ChatAgentLoader[T: BaseStruct]:
         self,
         template_name: str,
         model_client: ChatCompletionClient,
+        output_content_type: type[BaseModel] | None = None,
         **kwargs: T | Any,
     ) -> AssistantAgent:
         """Load agentic chat agent from template."""
@@ -51,6 +52,7 @@ class ChatAgentLoader[T: BaseStruct]:
             model_client=model_client,
             description=params.description,
             system_message=post.content,
+            output_content_type=output_content_type,
         )
 
 
@@ -69,4 +71,12 @@ class ModelClientLoader:
             base_url=config.base_url,
             api_key=config.api_key,
             organization=config.name,
+            model_info={
+                "vision": False,
+                "function_calling": True,
+                "json_output": True,
+                "family": "unknown",
+                "structured_output": True,
+                "multiple_system_messages": False,
+            }
         )

@@ -1,13 +1,14 @@
 """Workflow domain schemas."""
 
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from msgspec import field
+from pydantic import BaseModel, ConfigDict, Field
 
 from echocue.base import BaseStruct, CamelizedBaseStruct
-from echocue.core.lexicon import SemanticType
+from echocue.core.lexicon import SemanticClassificationCandidateStruct, SemanticType
 
 from .enum import (
     WorkflowPushAction,
@@ -17,6 +18,9 @@ from .enum import (
 )
 
 __all__ = (
+    "InterestAgentExecutionConfigStruct",
+    "InterestAgentInputStruct",
+    "InterestAgentOutput",
     "WorkflowPersonaContextStruct",
     "WorkflowPushAction",
     "WorkflowRunStruct",
@@ -31,6 +35,35 @@ __all__ = (
     "WorkflowTriggerParametersStruct",
     "WorkflowTriggerType",
 )
+
+
+class InterestAgentInputStruct(BaseStruct):
+    """Semantic classification input passed to the InterestAgent."""
+
+    room_id: str
+    semantic_type: SemanticType
+    semantic_confidence: float
+    candidates: list[SemanticClassificationCandidateStruct]
+
+
+class InterestAgentExecutionConfigStruct(BaseStruct):
+    """Runtime metadata and retry limits used by the InterestAgent."""
+
+    agent_name: str = "interest_agent"
+    max_attempts: int = 3
+    provider_name: str | None = None
+    model_id: str | None = None
+
+
+class InterestAgentOutput(BaseModel):
+    """Validated InterestAgent output."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    interest_score: Annotated[float, Field(ge=0)]
+    interest_type: SemanticType
+    selected_comment_id: str | None = None
+    reason: str
 
 
 class WorkflowPersonaContextStruct(BaseStruct):

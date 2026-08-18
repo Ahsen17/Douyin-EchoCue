@@ -1,5 +1,10 @@
 """Workflow domain package."""
 
+from .agent import (
+    AutoGenInterestAgent,
+    AutoGenInterestAgentFactory,
+    WorkflowInterestHandler,
+)
 from .enum import (
     WorkflowPushAction,
     WorkflowStageName,
@@ -7,6 +12,7 @@ from .enum import (
     WorkflowTriggerType,
 )
 from .exception import (
+    WorkflowInterestInputRoomMismatchError,
     WorkflowPersonaContextNotFoundError,
     WorkflowPersonaContextRoomMismatchError,
     WorkflowSemanticClassificationRoomMismatchError,
@@ -19,6 +25,9 @@ from .handler import (
 )
 from .model import WorkflowRuns
 from .schema import (
+    InterestAgentExecutionConfigStruct,
+    InterestAgentInputStruct,
+    InterestAgentOutput,
     WorkflowPersonaContextStruct,
     WorkflowRunStruct,
     WorkflowRunVO,
@@ -33,7 +42,14 @@ from .service import WorkflowRunService
 from .trigger import WorkflowTriggerEvaluator
 
 __all__ = (
+    "AutoGenInterestAgent",
+    "AutoGenInterestAgentFactory",
+    "InterestAgentExecutionConfigStruct",
+    "InterestAgentInputStruct",
+    "InterestAgentOutput",
     "StaticWorkflowPersonaContextResolver",
+    "WorkflowInterestHandler",
+    "WorkflowInterestInputRoomMismatchError",
     "WorkflowPersonaContextHandler",
     "WorkflowPersonaContextNotFoundError",
     "WorkflowPersonaContextResolver",
