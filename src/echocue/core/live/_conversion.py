@@ -19,7 +19,7 @@ def convert_struct[T: Struct](data: Struct, target_type: type[T]) -> T:
     return target_type(**converted)
 
 
-def _convert_value(value: object, target_type: object) -> object:
+def _convert_value(value: Any, target_type: Any) -> Any:
     if isinstance(target_type, type) and issubclass(target_type, Struct) and isinstance(value, Struct):
         return convert_struct(value, target_type)
 

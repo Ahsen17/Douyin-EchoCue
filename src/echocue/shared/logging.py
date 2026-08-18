@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from litestar.logging.config import LoggingConfig as LitestarLoggingConfig
@@ -129,12 +129,12 @@ class LoggingSetup:
     def _build_stdlib_config(self) -> "LitestarLoggingConfig":
         """Build stdlib ``LoggingConfig`` with handlers and ignored loggers."""
 
-        formatter: dict[str, object] = {
+        formatter: dict[str, Any] = {
             "()": ProcessorFormatter,
             "processors": self._build_stdlib_processors(),
         }
 
-        handlers: dict[str, dict[str, object]] = {
+        handlers: dict[str, dict[str, Any]] = {
             "console": {
                 "class": "logging.StreamHandler",
                 "level": "DEBUG",
@@ -148,7 +148,7 @@ class LoggingSetup:
             handlers["file"] = self._build_file_handler()
             root_handlers.append("file")
 
-        loggers: dict[str, dict[str, object]] = {}
+        loggers: dict[str, dict[str, Any]] = {}
         for name in self._config.ignored_loggers:
             loggers[name] = {"level": logging.CRITICAL + 1, "handlers": [], "propagate": False}
 
@@ -159,7 +159,7 @@ class LoggingSetup:
             root={"handlers": root_handlers, "level": self._config.level},
         )
 
-    def _build_file_handler(self) -> dict[str, object]:
+    def _build_file_handler(self) -> dict[str, Any]:
         """Build file handler dict config with rotation."""
 
         file_cfg = self._config.file

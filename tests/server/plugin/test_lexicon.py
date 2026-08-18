@@ -43,7 +43,7 @@ class FakeQdrantClientFactory:
 
     client: FakeQdrantClient
 
-    def __init__(self, config: object) -> None:
+    def __init__(self, config: Any) -> None:
         self.client = FakeQdrantClient()
 
     def new(self) -> FakeQdrantClient:
@@ -190,7 +190,7 @@ class TestLexiconServeCommand:
                 super().__init__(qdrant_client, collection_name=collection_name)
                 self.created_classifiers.append(tracking_self)
 
-        def create_fake_server(classification_client: object) -> FakeGrpcServer:
+        def create_fake_server(classification_client: Any) -> FakeGrpcServer:
             assert classification_client is self.created_classifiers[0]
             return self.fake_server
 
@@ -294,7 +294,7 @@ class TestLexiconComposeConfig:
         services = self.compose_config["services"]
         lexicon_service = services["lexicon"]
 
-        assert lexicon_service["image"] == "echocue-app:0.1.0"
+        assert lexicon_service["image"] == "echocue:0.1.0"
         assert lexicon_service["command"] == ["uv", "run", "app", "lexicon", "serve"]
         assert lexicon_service["expose"] == ["50051"]
         assert lexicon_service["depends_on"]["qdrant"]["condition"] == "service_started"

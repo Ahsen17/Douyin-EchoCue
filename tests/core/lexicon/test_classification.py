@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import anyio
 import anyio.lowlevel
@@ -7,6 +7,7 @@ import pytest
 from qdrant_client import AsyncQdrantClient
 
 from echocue.core.lexicon import (
+    FakeSemanticClassificationClient,
     QdrantSemanticClassificationClient,
     SemanticClassificationCommentStruct,
     SemanticClassificationRequestStruct,
@@ -75,7 +76,7 @@ class FailingQdrantClient:
 
 
 class SlowCollectionQdrantClient:
-    async def get_collection(self, collection_name: str) -> object:
+    async def get_collection(self, collection_name: str) -> Any:
         await anyio.sleep(1)
         return object()
 
@@ -128,6 +129,23 @@ class TestQdrantSemanticClassificationClient:
         assert result.semantic_type is SemanticType.OTHER
         assert result.confidence == 0
         assert result.candidates == []
+
+    async def test_returns_other_when_window_confidence_is_below_threshold(self) -> None:
+        classification_client = FakeSemanticClassificationClient()
+
+        result = await classification_client.classify(
+            SemanticClassificationRequestStruct(
+                room_id="room-a",
+                text_batch=["主播好帅", "这波操作笑死我了"],
+            )
+        )
+
+        assert result.semantic_type is SemanticType.OTHER
+        assert result.confidence == 0.5
+        assert {candidate.semantic_type for candidate in result.candidates} == {
+            SemanticType.PERSONA_PRAISE,
+            SemanticType.PLAYFUL_JOKE,
+        }
 
     async def test_returns_other_when_collection_is_unavailable(self) -> None:
         classification_client = QdrantSemanticClassificationClient(

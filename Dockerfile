@@ -18,8 +18,8 @@ EXPOSE 8000 50051
 # Start the app service by default. The lexicon service can reuse the same image and be started via the project CLI.
 
 # App example:
-#   docker run --rm -p 8000:8000 -v "$PWD/config/app.config.yaml:/app/config.yaml:ro" echocue-app:0.1.0
+#   docker run --rm -p 8000:8000 -v "$PWD/config/app.config.yaml:/app/config.yaml:ro" echocue:0.1.0
 # Lexicon example:
 #   docker run --rm -p 50051:50051 -v "$PWD/config/app.config.yaml:/app/config.yaml:ro" \
-#     -v "$PWD/assets:/app/assets:ro" echocue-app:0.1.0 uv run app lexicon serve
+#     -v "$PWD/assets:/app/assets:ro" echocue:0.1.0 uv run app lexicon serve
 CMD ["uv", "run", "app", "run", "--host", "0.0.0.0", "--port", "8000"]
