@@ -6,11 +6,16 @@ from .enum import (
     WorkflowStatus,
     WorkflowTriggerType,
 )
-from .exception import WorkflowPersonaContextNotFoundError, WorkflowPersonaContextRoomMismatchError
+from .exception import (
+    WorkflowPersonaContextNotFoundError,
+    WorkflowPersonaContextRoomMismatchError,
+    WorkflowSemanticClassificationRoomMismatchError,
+)
 from .handler import (
     StaticWorkflowPersonaContextResolver,
     WorkflowPersonaContextHandler,
     WorkflowPersonaContextResolver,
+    WorkflowSemanticClassificationHandler,
 )
 from .model import WorkflowRuns
 from .schema import (
@@ -39,6 +44,8 @@ __all__ = (
     "WorkflowRunStruct",
     "WorkflowRunVO",
     "WorkflowRuns",
+    "WorkflowSemanticClassificationHandler",
+    "WorkflowSemanticClassificationRoomMismatchError",
     "WorkflowStageAttemptStruct",
     "WorkflowStageAttemptVO",
     "WorkflowStageEnvelopeStruct",

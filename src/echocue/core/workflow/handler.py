@@ -4,10 +4,19 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Protocol
 
+from echocue.core.lexicon import (
+    SemanticClassificationClient,
+    SemanticClassificationCommentStruct,
+    SemanticClassificationRequestStruct,
+    SemanticClassificationResultStruct,
+)
+from echocue.core.live import CommentWindowWorkflowInputStruct
+
 from .enum import WorkflowStageName
 from .exception import (
     WorkflowPersonaContextNotFoundError,
     WorkflowPersonaContextRoomMismatchError,
+    WorkflowSemanticClassificationRoomMismatchError,
 )
 from .schema import (
     WorkflowPersonaContextStruct,
@@ -19,6 +28,7 @@ __all__ = (
     "StaticWorkflowPersonaContextResolver",
     "WorkflowPersonaContextHandler",
     "WorkflowPersonaContextResolver",
+    "WorkflowSemanticClassificationHandler",
 )
 
 
@@ -83,3 +93,66 @@ class WorkflowPersonaContextHandler:
         )
 
         return frozen
+
+
+class WorkflowSemanticClassificationHandler:
+    """Classify workflow comment-window input and record the semantic stage."""
+
+    def __init__(self, classification_client: SemanticClassificationClient) -> None:
+        self._classification_client = classification_client
+
+    async def classify_workflow_run(
+        self,
+        workflow_run: WorkflowRunStruct,
+        comment_window: CommentWindowWorkflowInputStruct,
+        *,
+        classified_at: datetime | None = None,
+    ) -> WorkflowRunStruct:
+        """Classify a comment window and freeze its result into a workflow run."""
+
+        if workflow_run.room_id != comment_window.room_id:
+            raise WorkflowSemanticClassificationRoomMismatchError(workflow_run.room_id, comment_window.room_id)
+
+        request = SemanticClassificationRequestStruct(
+            room_id=comment_window.room_id,
+            text_batch=list(comment_window.text_batch),
+            top_n=comment_window.top_n,
+            comment_batch=[
+                SemanticClassificationCommentStruct(comment_id=comment.comment_id, text=comment.content)
+                for comment in comment_window.comments
+            ],
+        )
+        started_at = classified_at or datetime.now(UTC)
+        result, error = await self._classify(request)
+        completed_at = classified_at or datetime.now(UTC)
+        latency_ms = max(round((completed_at - started_at).total_seconds() * 1000), 0)
+
+        classified = WorkflowRunStruct.from_dict(workflow_run.to_dict())
+        classified.semantic_type = result.semantic_type
+        classified.semantic_classification_stage = WorkflowStageEnvelopeStruct(
+            stage_name=WorkflowStageName.SEMANTIC_CLASSIFICATION_STAGE,
+            started_at=started_at,
+            completed_at=completed_at,
+            latency_ms=latency_ms,
+            input=request.to_dict(),
+            output=result.to_dict(),
+            error=error,
+        )
+
+        return classified
+
+    async def _classify(
+        self,
+        request: SemanticClassificationRequestStruct,
+    ) -> tuple[SemanticClassificationResultStruct, dict[str, str] | None]:
+        try:
+            return await self._classification_client.classify(request), None
+        # The injected client is an external service boundary; any provider failure becomes an auditable fallback.
+        except Exception as exc:  # noqa: BLE001
+            return (
+                SemanticClassificationResultStruct.other(top_n=request.top_n),
+                {
+                    "type": type(exc).__name__,
+                    "message": "Semantic classification service failed.",
+                },
+            )

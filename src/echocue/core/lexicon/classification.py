@@ -36,6 +36,7 @@ DEFAULT_SEMANTIC_CLASSIFICATION_TOP_N = 5
 MIN_SEMANTIC_CLASSIFICATION_TOP_N = 1
 MAX_SEMANTIC_CLASSIFICATION_TOP_N = 10
 MAX_COMMENT_BATCH_SIZE = 5
+MIN_SEMANTIC_CLASSIFICATION_CONFIDENCE = 0.55
 _LOGGER = structlog.stdlib.get_logger(__name__)
 _SEMANTIC_TYPE_PRIORITY: dict[SemanticType, int] = {
     SemanticType.PERSONA_PRAISE: 4,
@@ -114,35 +115,21 @@ class FakeSemanticClassificationClient:
                 return SemanticClassificationResultStruct.other(top_n=top_n)
 
             scores = _score_candidates_by_semantic_type(candidates)
-            semantic_type, score = _select_semantic_type(scores)
-            total_score = sum(scores.values())
-            return SemanticClassificationResultStruct(
-                semantic_type=semantic_type,
-                confidence=score / total_score,
-                top_n=top_n,
-                candidates=candidates,
-            )
+            return _build_semantic_classification_result(scores, top_n=top_n, candidates=candidates)
 
         scores = self._score(request.text_batch)
         if not scores:
             return SemanticClassificationResultStruct.other(top_n=top_n)
 
-        semantic_type, score = _select_semantic_type(scores)
-        total_score = sum(scores.values())
         candidates = [
             SemanticClassificationCandidateStruct(
                 semantic_type=item_type,
                 score=item_score,
-                confidence=item_score / total_score,
+                confidence=item_score / sum(scores.values()),
             )
             for item_type, item_score in sorted(scores.items(), key=lambda item: item[1], reverse=True)
         ]
-        return SemanticClassificationResultStruct(
-            semantic_type=semantic_type,
-            confidence=score / total_score,
-            top_n=top_n,
-            candidates=candidates,
-        )
+        return _build_semantic_classification_result(scores, top_n=top_n, candidates=candidates)
 
     def _classify_comments(
         self,
@@ -247,22 +234,15 @@ class QdrantSemanticClassificationClient:
         if not scores:
             return SemanticClassificationResultStruct.other(top_n=top_n)
 
-        semantic_type, score = _select_semantic_type(scores)
-        total_score = sum(scores.values())
         candidates = [
             SemanticClassificationCandidateStruct(
                 semantic_type=item_type,
                 score=item_score,
-                confidence=item_score / total_score,
+                confidence=item_score / sum(scores.values()),
             )
             for item_type, item_score in sorted(scores.items(), key=lambda item: item[1], reverse=True)
         ]
-        return SemanticClassificationResultStruct(
-            semantic_type=semantic_type,
-            confidence=score / total_score,
-            top_n=top_n,
-            candidates=candidates,
-        )
+        return _build_semantic_classification_result(scores, top_n=top_n, candidates=candidates)
 
     async def _classify_comment_batch(
         self,
@@ -283,14 +263,7 @@ class QdrantSemanticClassificationClient:
 
         candidates = sorted(candidates, key=lambda candidate: candidate.score, reverse=True)[:top_n]
         scores = _score_candidates_by_semantic_type(candidates)
-        semantic_type, score = _select_semantic_type(scores)
-        total_score = sum(scores.values())
-        return SemanticClassificationResultStruct(
-            semantic_type=semantic_type,
-            confidence=score / total_score,
-            top_n=top_n,
-            candidates=candidates,
-        )
+        return _build_semantic_classification_result(scores, top_n=top_n, candidates=candidates)
 
     async def _classify_comment_batch_chunk(
         self,
@@ -394,6 +367,24 @@ def _score_candidates_by_semantic_type(
         scores[candidate.semantic_type] = scores.get(candidate.semantic_type, 0) + candidate.score
 
     return scores
+
+
+def _build_semantic_classification_result(
+    scores: dict[SemanticType, float],
+    *,
+    top_n: int,
+    candidates: list[SemanticClassificationCandidateStruct],
+) -> SemanticClassificationResultStruct:
+    semantic_type, score = _select_semantic_type(scores)
+    confidence = score / sum(scores.values())
+    resolved_semantic_type = semantic_type if confidence >= MIN_SEMANTIC_CLASSIFICATION_CONFIDENCE else SemanticType.OTHER
+
+    return SemanticClassificationResultStruct(
+        semantic_type=resolved_semantic_type,
+        confidence=confidence,
+        top_n=top_n,
+        candidates=candidates,
+    )
 
 
 def _chunk_comments(

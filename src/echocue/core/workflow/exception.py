@@ -7,6 +7,7 @@ from echocue.shared import ApplicationError
 __all__ = (
     "WorkflowPersonaContextNotFoundError",
     "WorkflowPersonaContextRoomMismatchError",
+    "WorkflowSemanticClassificationRoomMismatchError",
 )
 
 
@@ -30,5 +31,17 @@ class WorkflowPersonaContextRoomMismatchError(ApplicationError):
 
         super().__init__(
             (f"Published persona context room {persona_room_id} does not match workflow room {workflow_room_id}."),
+            status_code=HTTP_400_BAD_REQUEST,
+        )
+
+
+class WorkflowSemanticClassificationRoomMismatchError(ApplicationError):
+    """Raised when a semantic classification input does not belong to the workflow room."""
+
+    def __init__(self, workflow_room_id: str, classification_room_id: str) -> None:
+        """Initialize the semantic classification room mismatch error."""
+
+        super().__init__(
+            (f"Semantic classification room {classification_room_id} does not match workflow room {workflow_room_id}."),
             status_code=HTTP_400_BAD_REQUEST,
         )
