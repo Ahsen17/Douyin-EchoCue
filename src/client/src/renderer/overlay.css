@@ -6,7 +6,7 @@
   font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --overlay-scale: 1;
+  --overlay-scale: 1.15;
   --overlay-shell-opacity: 0.92;
 }
 
@@ -30,11 +30,11 @@ body {
   min-height: 100vh;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 10px;
-  padding: 15px 17px 17px;
+  padding: 22px 24px 24px;
   color: #f6f9fc;
   background: rgb(19 29 40 / var(--overlay-shell-opacity));
   box-shadow: 0 14px 34px rgba(2, 8, 14, 0.32);
-  font-size: calc(12px * var(--overlay-scale));
+  font-size: calc(18px * var(--overlay-scale));
 }
 
 [data-theme="light"] .overlay-shell {
@@ -46,7 +46,7 @@ body {
 
 .overlay-drag-handle {
   display: flex;
-  min-height: 22px;
+  min-height: 26px;
   align-items: center;
   justify-content: space-between;
   -webkit-app-region: drag;
@@ -56,7 +56,7 @@ body {
 
 .overlay-brand,
 .overlay-label {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.08em;
 }
@@ -75,7 +75,7 @@ body {
 
 .overlay-time {
   color: rgba(232, 239, 245, 0.55);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 [data-theme="light"] .overlay-time {
@@ -96,13 +96,23 @@ body {
 }
 
 .overlay-section p {
-  margin: 8px 0 0;
-  line-height: 1.55;
+  margin: 10px 0 0;
+  line-height: 1.65;
+}
+
+.overlay-user {
+  color: #fff;
+  font-size: 1em;
+  font-weight: 700;
+}
+
+[data-theme="light"] .overlay-user {
+  color: #17212b;
 }
 
 .overlay-comment {
   color: #fff;
-  font-size: 1.25em;
+  font-size: 1.46em;
   font-weight: 700;
 }
 
@@ -112,7 +122,7 @@ body {
 
 .overlay-divider {
   height: 1px;
-  margin: 14px 0;
+  margin: 18px 0;
   background: rgba(255, 255, 255, 0.14);
 }
 
@@ -123,11 +133,13 @@ body {
 .overlay-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
+  gap: 20px;
 }
 
 .overlay-grid p {
   color: rgba(242, 247, 251, 0.86);
+  font-size: 1.2em;
+  font-weight: 700;
 }
 
 [data-theme="light"] .overlay-grid p {

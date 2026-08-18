@@ -4,6 +4,11 @@ const electron_1 = require("electron");
 const clientApi = {
     platform: process.platform,
     isDevelopment: process.argv.includes("--echocue-development"),
+    window: {
+        minimize: () => electron_1.ipcRenderer.invoke("window:minimize"),
+        toggleMaximize: () => electron_1.ipcRenderer.invoke("window:toggle-maximize"),
+        close: () => electron_1.ipcRenderer.invoke("window:close"),
+    },
     overlay: {
         open: (payload) => electron_1.ipcRenderer.invoke("overlay:open", payload),
         update: (payload) => electron_1.ipcRenderer.invoke("overlay:update", payload),
@@ -14,6 +19,7 @@ const clientApi = {
         setOpacity: (opacity) => electron_1.ipcRenderer.invoke("overlay:set-opacity", opacity),
         setIgnoreMouseEvents: (enabled) => electron_1.ipcRenderer.invoke("overlay:set-ignore-mouse-events", enabled),
         setFontScale: (fontScale) => electron_1.ipcRenderer.invoke("overlay:set-font-scale", fontScale),
+        setSizeLevel: (sizeLevel) => electron_1.ipcRenderer.invoke("overlay:set-size-level", sizeLevel),
         setTheme: (theme) => electron_1.ipcRenderer.invoke("overlay:set-theme", theme),
         onUpdate: (callback) => {
             const listener = (_event, update) => callback(update);

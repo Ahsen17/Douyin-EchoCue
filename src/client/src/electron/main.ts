@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from "electron";
+import { app, BrowserWindow, Menu, ipcMain, screen, type IpcMainInvokeEvent } from "electron";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
@@ -7,11 +7,18 @@ const rendererUrl = process.env.ECHOCUE_RENDERER_URL ?? "http://127.0.0.1:5173";
 const clientSettingsFileName = "client-settings.json";
 
 type OverlayTheme = "light" | "dark";
+type OverlaySizeLevel = "small" | "medium" | "large";
 const overlayAlwaysOnTopLevel = "screen-saver" as const;
 const overlayConstraintIntervalMs = 300;
 const overlayTopmostResetIntervalMs = 1800;
+const overlaySizePresets: Record<OverlaySizeLevel, { width: number; height: number }> = {
+  small: { width: 660, height: 300 },
+  medium: { width: 820, height: 390 },
+  large: { width: 980, height: 480 },
+};
 
 type OverlayPayload = {
+  userName: string;
   commentDisplay: string;
   quickReply: string;
   cue: string;
@@ -25,6 +32,7 @@ type ClientSettings = {
     opacity: number;
     fontScale: number;
     theme: OverlayTheme;
+    sizeLevel: OverlaySizeLevel;
   };
   workspaceView: "overview" | "settings";
 };
@@ -35,8 +43,9 @@ let overlayPayload: OverlayPayload | null = null;
 let overlayAlwaysOnTop = true;
 let overlayOpacity = 0.94;
 let overlayClickThrough = false;
-let overlayFontScale = 1;
+let overlayFontScale = 1.15;
 let overlayTheme: OverlayTheme = "dark";
+let overlaySizeLevel: OverlaySizeLevel = "medium";
 let overlayConstraintTimer: NodeJS.Timeout | null = null;
 let overlayLastTopmostResetAt = 0;
 let clientSettings: ClientSettings = {
@@ -46,6 +55,7 @@ let clientSettings: ClientSettings = {
     opacity: overlayOpacity,
     fontScale: overlayFontScale,
     theme: overlayTheme,
+    sizeLevel: overlaySizeLevel,
   },
   workspaceView: "overview",
 };
@@ -56,6 +66,8 @@ function createMainWindow(): BrowserWindow {
     height: 760,
     minWidth: 960,
     minHeight: 640,
+    frame: false,
+    autoHideMenuBar: true,
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -66,6 +78,8 @@ function createMainWindow(): BrowserWindow {
   });
 
   mainWindow = window;
+  window.setMenuBarVisibility(false);
+  window.removeMenu();
   window.once("ready-to-show", () => {
     window.show();
   });
@@ -84,14 +98,16 @@ function createMainWindow(): BrowserWindow {
 }
 
 function createOverlayWindow(): BrowserWindow {
+  const bounds = getOverlayBounds(overlaySizeLevel);
   const window = new BrowserWindow({
-    width: 440,
-    height: 260,
-    minWidth: 320,
-    minHeight: 180,
+    ...bounds,
+    minWidth: overlaySizePresets.small.width,
+    minHeight: overlaySizePresets.small.height,
+    maxWidth: overlaySizePresets.large.width,
+    maxHeight: overlaySizePresets.large.height,
     frame: false,
     transparent: true,
-    resizable: true,
+    resizable: false,
     focusable: false,
     show: false,
     skipTaskbar: true,
@@ -159,9 +175,12 @@ function sanitizeClientSettings(value: unknown): ClientSettings {
           : clientSettings.overlay.opacity,
       fontScale:
         typeof overlay.fontScale === "number"
-          ? Math.min(1.35, Math.max(0.85, overlay.fontScale))
+          ? Math.min(1.6, Math.max(1, overlay.fontScale))
           : clientSettings.overlay.fontScale,
       theme: overlay.theme === "light" || overlay.theme === "dark" ? overlay.theme : clientSettings.overlay.theme,
+      sizeLevel: isOverlaySizeLevel(overlay.sizeLevel)
+        ? overlay.sizeLevel
+        : clientSettings.overlay.sizeLevel,
     },
     workspaceView:
       candidate.workspaceView === "settings" || candidate.workspaceView === "overview"
@@ -177,6 +196,7 @@ function applyClientSettings(settings: ClientSettings): void {
   overlayOpacity = settings.overlay.opacity;
   overlayFontScale = settings.overlay.fontScale;
   overlayTheme = settings.overlay.theme;
+  overlaySizeLevel = settings.overlay.sizeLevel;
 }
 
 async function loadClientSettings(): Promise<void> {
@@ -243,12 +263,14 @@ function applyOverlayWindowSettings(window: BrowserWindow): void {
   window.setOpacity(overlayOpacity);
   window.setFocusable(false);
   window.setSkipTaskbar(true);
+  window.setResizable(false);
   applyOverlayClickThrough(window);
   window.setFullScreenable(false);
   applyOverlayTopmost(window);
 }
 
 function showOverlayWindow(window: BrowserWindow): void {
+  applyOverlayBounds(window);
   window.showInactive();
   applyOverlayWindowSettings(window);
   applyOverlayTopmost(window, true);
@@ -283,18 +305,43 @@ function closeOverlayWindow(): void {
   overlayWindow = null;
 }
 
+function isOverlaySizeLevel(value: unknown): value is OverlaySizeLevel {
+  return value === "small" || value === "medium" || value === "large";
+}
+
+function getOverlayBounds(sizeLevel: OverlaySizeLevel): { x: number; y: number; width: number; height: number } {
+  const preset = overlaySizePresets[sizeLevel];
+  const display = mainWindow && !mainWindow.isDestroyed()
+    ? screen.getDisplayMatching(mainWindow.getBounds())
+    : screen.getPrimaryDisplay();
+  const { workArea } = display;
+  const x = Math.round(workArea.x + (workArea.width - preset.width) / 2);
+  const y = Math.round(workArea.y + (workArea.height - preset.height) * 0.72);
+
+  return {
+    x: Math.max(workArea.x, Math.min(x, workArea.x + workArea.width - preset.width)),
+    y: Math.max(workArea.y, Math.min(y, workArea.y + workArea.height - preset.height)),
+    ...preset,
+  };
+}
+
+function applyOverlayBounds(window: BrowserWindow): void {
+  window.setBounds(getOverlayBounds(overlaySizeLevel), false);
+}
+
 function requirePayload(value: unknown): OverlayPayload {
   if (!value || typeof value !== "object") {
     throw new TypeError("Invalid overlay payload.");
   }
 
   const payload = value as Record<string, unknown>;
-  const fields = ["commentDisplay", "quickReply", "cue", "createdAt"];
+  const fields = ["userName", "commentDisplay", "quickReply", "cue", "createdAt"];
   if (fields.some((field) => typeof payload[field] !== "string")) {
     throw new TypeError("Invalid overlay payload.");
   }
 
   return {
+    userName: payload.userName as string,
     commentDisplay: payload.commentDisplay as string,
     quickReply: payload.quickReply as string,
     cue: payload.cue as string,
@@ -376,8 +423,18 @@ function registerOverlayHandlers(): void {
     if (!isMainWindowSender(event) || typeof fontScale !== "number") {
       return;
     }
-    overlayFontScale = Math.min(1.35, Math.max(0.85, fontScale));
+    overlayFontScale = Math.min(1.6, Math.max(1, fontScale));
     sendOverlayState();
+  });
+  ipcMain.handle("overlay:set-size-level", (event, sizeLevel: unknown) => {
+    if (!isMainWindowSender(event) || !isOverlaySizeLevel(sizeLevel)) {
+      return;
+    }
+    overlaySizeLevel = sizeLevel;
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      applyOverlayBounds(overlayWindow);
+      applyOverlayWindowSettings(overlayWindow);
+    }
   });
   ipcMain.handle("overlay:set-theme", (event, theme: unknown) => {
     if (!isMainWindowSender(event) || (theme !== "light" && theme !== "dark")) {
@@ -409,7 +466,34 @@ function registerOverlayHandlers(): void {
   });
 }
 
+function registerWindowHandlers(): void {
+  ipcMain.handle("window:minimize", (event) => {
+    if (!isMainWindowSender(event)) {
+      return;
+    }
+    mainWindow?.minimize();
+  });
+  ipcMain.handle("window:toggle-maximize", (event) => {
+    if (!isMainWindowSender(event) || !mainWindow) {
+      return;
+    }
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  });
+  ipcMain.handle("window:close", (event) => {
+    if (!isMainWindowSender(event)) {
+      return;
+    }
+    mainWindow?.close();
+  });
+}
+
+Menu.setApplicationMenu(null);
 registerOverlayHandlers();
+registerWindowHandlers();
 
 app.whenReady().then(async () => {
   await loadClientSettings();

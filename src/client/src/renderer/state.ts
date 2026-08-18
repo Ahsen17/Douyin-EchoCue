@@ -5,6 +5,7 @@ export type RuntimeStatus = "idle" | "starting" | "running" | "paused" | "error"
 export type RoomStatus = "live" | "offline";
 
 export type OverlayTheme = "light" | "dark";
+export type OverlaySizeLevel = "small" | "medium" | "large";
 export type WorkspaceView = "overview" | "settings";
 
 export interface Account {
@@ -22,6 +23,7 @@ export interface Room {
 }
 
 export interface PushPreview {
+  userName: string;
   commentDisplay: string;
   quickReply: string;
   cue: string;
@@ -35,6 +37,7 @@ export interface OverlayConfig {
   opacity: number;
   fontScale: number;
   theme: OverlayTheme;
+  sizeLevel: OverlaySizeLevel;
 }
 
 export interface OverlayPreferences {
@@ -43,6 +46,7 @@ export interface OverlayPreferences {
   opacity: number;
   fontScale: number;
   theme: OverlayTheme;
+  sizeLevel: OverlaySizeLevel;
 }
 
 export interface ClientSettings {
@@ -79,8 +83,9 @@ export const initialState: ClientState = {
     alwaysOnTop: true,
     clickThrough: false,
     opacity: 0.94,
-    fontScale: 1,
+    fontScale: 1.15,
     theme: "dark",
+    sizeLevel: "medium",
   },
   workspaceView: "overview",
 };
@@ -90,8 +95,9 @@ export const initialClientSettings: ClientSettings = {
     alwaysOnTop: true,
     clickThrough: false,
     opacity: 0.94,
-    fontScale: 1,
+    fontScale: 1.15,
     theme: "dark",
+    sizeLevel: "medium",
   },
   workspaceView: "overview",
 };

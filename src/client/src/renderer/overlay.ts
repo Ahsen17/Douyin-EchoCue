@@ -1,6 +1,7 @@
 import "./overlay.css";
 
 type OverlayPayload = {
+  userName: string;
   commentDisplay: string;
   quickReply: string;
   cue: string;
@@ -30,12 +31,13 @@ window.echocue.overlay.onUpdate((update: OverlayUpdate) => {
 function renderOverlay(payload: OverlayPayload): string {
   return `
     <section class="overlay-shell">
-      <div class="overlay-drag-handle" title="拖动浮窗">
+      <div class="overlay-drag-handle">
         <span class="overlay-brand">ECHO<span>/</span>CUE</span>
         <span class="overlay-time">${escapeHtml(payload.createdAt)}</span>
       </div>
       <div class="overlay-section">
         <span class="overlay-label">观众弹幕</span>
+        <p class="overlay-user">@${escapeHtml(payload.userName)}</p>
         <p class="overlay-comment">“${escapeHtml(payload.commentDisplay)}”</p>
       </div>
       <div class="overlay-divider"></div>

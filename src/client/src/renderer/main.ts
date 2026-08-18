@@ -1,10 +1,12 @@
 import "./styles.css";
-import { mockAdapters } from "./mock-adapter";
+import { mockAdapters, setMockScenario, type MockScenario } from "./mock-adapter";
+import type { ClientAdapters } from "./adapter";
 import {
   initialClientSettings,
   initialState,
   type ClientState,
   type ClientSettings,
+  type OverlaySizeLevel,
   type OverlayTheme,
   type Room,
   type RuntimeStatus,
@@ -17,11 +19,14 @@ if (!app) {
 }
 
 const root = app;
+const overlayDisplayDurationMs = 10_000;
 
 let state: ClientState = structuredClone(initialState);
-let pushIndex = 0;
 let clientSettingsSaveChain: Promise<void> = Promise.resolve();
 let clientSettingsReady = false;
+let adapters: ClientAdapters = mockAdapters;
+let scenario: MockScenario = "normal";
+let overlayHideTimer: number | null = null;
 
 render();
 void bootstrapClientSettings();
@@ -53,8 +58,10 @@ async function bootstrapClientSettings(): Promise<void> {
 }
 
 function render(): void {
+  const scrollState = captureScrollState();
   root.innerHTML = state.screen === "welcome" ? renderWelcome() : renderWorkspace();
   bindEvents();
+  restoreScrollState(scrollState);
 }
 
 function renderWelcome(): string {
@@ -112,19 +119,32 @@ function renderWorkspace(): string {
   return `
     <main class="workspace">
       <header class="topbar">
-        <div class="brand-lockup">
-          <span class="brand-mark brand-mark-small" aria-hidden="true">EC</span>
-          <span class="brand-name">EchoCue Client</span>
+        <div class="topbar-drag-region">
+          <div class="brand-lockup">
+            <span class="brand-mark brand-mark-small" aria-hidden="true">EC</span>
+            <span class="brand-name">EchoCue Client</span>
+          </div>
+          <span class="environment-label"><span class="status-dot status-dot-green"></span>Mock 环境</span>
         </div>
         <div class="topbar-actions">
-          <span class="environment-label"><span class="status-dot status-dot-green"></span>Mock 环境</span>
-          <button class="icon-button" data-action="sign-out" title="退出当前账号" aria-label="退出当前账号">↪</button>
           <div class="account-chip">
             <span class="avatar" aria-hidden="true">${escapeHtml(account?.displayName.slice(0, 1) ?? "E")}</span>
             <span>
               <strong>${escapeHtml(account?.displayName ?? "未登录")}</strong>
               <small>${escapeHtml(account?.accountType ?? "")}</small>
             </span>
+          </div>
+          <button class="icon-button" data-action="sign-out" title="退出当前账号" aria-label="退出当前账号">↪</button>
+          <div class="window-controls" aria-label="窗口控制">
+            <button class="window-control window-control-close" data-action="window-close" data-tooltip="关闭" aria-label="关闭">
+              <span aria-hidden="true"></span>
+            </button>
+            <button class="window-control window-control-minimize" data-action="window-minimize" data-tooltip="最小化" aria-label="最小化">
+              <span aria-hidden="true"></span>
+            </button>
+            <button class="window-control window-control-maximize" data-action="window-toggle-maximize" data-tooltip="最大化" aria-label="最大化">
+              <span aria-hidden="true"></span>
+            </button>
           </div>
         </div>
       </header>
@@ -146,7 +166,7 @@ function renderWorkspace(): string {
               <div class="connection-icon">↗</div>
               <div>
                 <strong>服务连接</strong>
-                <span>当前使用本地 mock</span>
+                <span>${renderScenarioLabel(scenario)}</span>
               </div>
               <span class="status-dot status-dot-amber"></span>
             </div>
@@ -181,6 +201,22 @@ function renderOverviewPage(
       </div>
     </div>
     ${error}
+    <section class="surface scenario-surface">
+      <div class="surface-heading">
+        <div>
+          <h2>Mock 场景</h2>
+          <p>用于验证空态、加载态和错误态展示。</p>
+        </div>
+        <span class="status-badge tone-neutral">Stage 5</span>
+      </div>
+      <div class="scenario-controls">
+        <button class="button button-secondary" data-action="set-scenario" data-scenario="normal">恢复默认</button>
+        <button class="button button-secondary" data-action="set-scenario" data-scenario="emptyRooms">空直播间</button>
+        <button class="button button-secondary" data-action="set-scenario" data-scenario="roomError">直播间错误</button>
+        <button class="button button-secondary" data-action="set-scenario" data-scenario="runtimeError">运行错误</button>
+        <button class="button button-secondary" data-action="set-scenario" data-scenario="emptyPush">空推送</button>
+      </div>
+    </section>
     <div class="content-grid">
       <section class="surface room-surface">
         <div class="surface-heading">
@@ -212,7 +248,7 @@ function renderOverviewPage(
           <span class="status-badge ${runtimeTone}">${runtimeLabel}</span>
         </div>
         <div class="runtime-overview">
-          <div class="runtime-ring ${runtimeTone}"><span>${state.runtimeStatus === "running" ? "ON" : "—"}</span></div>
+          <div class="runtime-ring ${runtimeTone}"><span>${state.runtimeStatus === "running" ? "ON" : state.runtimeStatus === "starting" ? "..." : "—"}</span></div>
           <div>
             <strong>${escapeHtml(state.runtimeMessage)}</strong>
             <p>${selectedRoom ? escapeHtml(selectedRoom.name) : "尚未选择直播间"}</p>
@@ -268,34 +304,41 @@ function renderSettingsPage(account: NonNullable<ClientState["account"]>, runtim
           <span>${state.overlay.isVisible ? "隐藏浮窗" : "显示浮窗"}</span>
           <span aria-hidden="true">${state.overlay.isVisible ? "□" : "▣"}</span>
         </button>
-        <button class="button button-secondary" data-action="toggle-overlay-top" ${!state.overlay.isVisible ? "disabled" : ""}>
+        <button class="button button-secondary" data-action="toggle-overlay-top">
           <span>${state.overlay.alwaysOnTop ? "取消置顶" : "保持置顶"}</span>
         </button>
-        <button class="button button-secondary" data-action="toggle-overlay-click" ${!state.overlay.isVisible ? "disabled" : ""}>
+        <button class="button button-secondary" data-action="toggle-overlay-click">
           <span>${state.overlay.clickThrough ? "恢复点击" : "点击穿透"}</span>
         </button>
-        <button class="button button-secondary" data-action="toggle-overlay-theme" ${!state.overlay.isVisible ? "disabled" : ""}>
+        <button class="button button-secondary" data-action="toggle-overlay-theme">
           <span>${state.overlay.theme === "dark" ? "浅色主题" : "深色主题"}</span>
         </button>
+      </div>
+      <div class="overlay-size-options" role="group" aria-label="浮窗尺寸">
+        ${renderOverlaySizeOption("small")}
+        ${renderOverlaySizeOption("medium")}
+        ${renderOverlaySizeOption("large")}
       </div>
       <div class="overlay-sliders">
         <label>
           <span>透明度</span>
-          <input type="range" min="0.35" max="1" step="0.005" value="${state.overlay.opacity}" data-action="set-overlay-opacity" ${!state.overlay.isVisible ? "disabled" : ""} />
+          <input type="range" min="0.35" max="1" step="0.005" value="${state.overlay.opacity}" data-action="set-overlay-opacity" />
           <strong data-value="overlay-opacity">${Math.round(state.overlay.opacity * 100)}%</strong>
         </label>
         <label>
           <span>字号</span>
-          <input type="range" min="0.85" max="1.35" step="0.01" value="${state.overlay.fontScale}" data-action="set-overlay-font" ${!state.overlay.isVisible ? "disabled" : ""} />
+          <input type="range" min="1" max="1.6" step="0.01" value="${state.overlay.fontScale}" data-action="set-overlay-font" />
           <strong data-value="overlay-font">${Math.round(state.overlay.fontScale * 100)}%</strong>
         </label>
       </div>
       <div class="settings-summary">
         <div class="metric-row"><span>置顶</span><strong>${topOn}</strong></div>
         <div class="metric-row"><span>点击穿透</span><strong>${clickThroughLabel}</strong></div>
+        <div class="metric-row"><span>窗口尺寸</span><strong>${getOverlaySizeLabel(state.overlay.sizeLevel)}</strong></div>
         <div class="metric-row"><span>页面状态</span><strong>${state.workspaceView === "settings" ? "展示设置" : "运行概览"}</strong></div>
+        <div class="metric-row"><span>对接边界</span><strong>mock adapter</strong></div>
       </div>
-      <p class="overlay-hint">这里直接承载浮窗设置，作为独立页面保留。</p>
+      <p class="overlay-hint">这里直接承载浮窗设置，窗口隐藏时也可以直接调整，变更会写回本地配置并在下一次浮窗显示时生效。</p>
     </section>
   `;
 }
@@ -315,6 +358,16 @@ function renderRoom(room: Room): string {
   `;
 }
 
+function renderOverlaySizeOption(sizeLevel: OverlaySizeLevel): string {
+  const isActive = state.overlay.sizeLevel === sizeLevel;
+  return `
+    <button class="size-option ${isActive ? "is-active" : ""}" type="button" data-action="set-overlay-size" data-size-level="${sizeLevel}">
+      <strong>${getOverlaySizeLabel(sizeLevel)}</strong>
+      <span>${getOverlaySizeDescription(sizeLevel)}</span>
+    </button>
+  `;
+}
+
 function renderRoomLoading(): string {
   return `<div class="empty-state"><span class="spinner spinner-dark"></span><strong>正在读取直播间</strong><span>mock adapter 正在准备数据</span></div>`;
 }
@@ -328,6 +381,7 @@ function renderPush(push: NonNullable<ClientState["lastPush"]>): string {
     <div class="push-content">
       <div class="push-comment">
         <span class="push-label">观众弹幕</span>
+        <p class="push-user">@${escapeHtml(push.userName)}</p>
         <p>“${escapeHtml(push.commentDisplay)}”</p>
         <span class="push-time">${escapeHtml(push.createdAt)}</span>
       </div>
@@ -350,14 +404,15 @@ function bindEvents(): void {
       element.addEventListener("input", () => {
         void handleSliderInput(element.dataset.action ?? "", element.value, element);
       });
-      element.addEventListener("change", () => {
-        render();
-      });
       return;
     }
 
     element.addEventListener("click", () => {
-      void handleAction(element.dataset.action ?? "", element.dataset.roomId);
+      void handleAction(
+        element.dataset.action ?? "",
+        element.dataset.roomId,
+        element.dataset.scenario ?? element.dataset.sizeLevel,
+      );
     });
   });
 }
@@ -367,7 +422,11 @@ async function handleAction(action: string, roomId?: string, value?: string): Pr
     state = { ...state, isLoading: true, errorMessage: null };
     render();
     try {
-      const [account, rooms] = await Promise.all([mockAdapters.auth.signIn(), mockAdapters.room.loadRooms()]);
+      const [account, rooms, runtime] = await Promise.all([
+        adapters.auth.signIn(),
+        adapters.room.loadRooms(),
+        adapters.runtime.getStatus(),
+      ]);
       state = {
         ...state,
         screen: "workspace",
@@ -375,6 +434,8 @@ async function handleAction(action: string, roomId?: string, value?: string): Pr
         account,
         rooms,
         selectedRoomId: rooms[0]?.id ?? null,
+        runtimeStatus: runtime.status,
+        runtimeMessage: runtime.message,
       };
     } catch {
       state = { ...state, isLoading: false, errorMessage: "mock 账户暂时不可用，请稍后重试。" };
@@ -384,15 +445,34 @@ async function handleAction(action: string, roomId?: string, value?: string): Pr
   }
 
   if (action === "sign-out") {
+    clearOverlayHideTimer();
     await window.echocue.overlay.close();
+    await adapters.auth.signOut();
     const resetState = structuredClone(initialState);
     state = {
       ...resetState,
       overlay: { ...state.overlay, isVisible: false },
       workspaceView: state.workspaceView,
     };
-    pushIndex = 0;
+    setMockScenario("normal");
+    scenario = "normal";
+    adapters = mockAdapters;
     render();
+    return;
+  }
+
+  if (action === "window-minimize") {
+    await window.echocue.window.minimize();
+    return;
+  }
+
+  if (action === "window-toggle-maximize") {
+    await window.echocue.window.toggleMaximize();
+    return;
+  }
+
+  if (action === "window-close") {
+    await window.echocue.window.close();
     return;
   }
 
@@ -417,8 +497,41 @@ async function handleAction(action: string, roomId?: string, value?: string): Pr
   }
 
   if (action === "next-push" && state.runtimeStatus === "running") {
-    state = { ...state, lastPush: mockAdapters.push.getPreview(pushIndex++) };
-    await syncOverlayContent();
+    state = { ...state, lastPush: await adapters.push.getNextPreview() };
+    if (!state.lastPush) {
+      state = { ...state, errorMessage: "当前场景没有可展示的推送内容。" };
+    }
+    await showOverlayContent();
+    render();
+    return;
+  }
+
+  if (action === "set-scenario" && value) {
+    scenario = value as MockScenario;
+    setMockScenario(scenario);
+    state = { ...state, errorMessage: null };
+    if (scenario === "emptyRooms") {
+      state = { ...state, isLoading: true };
+      render();
+      void refreshRooms();
+      return;
+    }
+    if (scenario === "roomError") {
+      state = { ...state, isLoading: true };
+      render();
+      void refreshRooms();
+      return;
+    }
+    if (scenario === "emptyPush") {
+      state = { ...state, lastPush: null };
+    }
+    if (scenario === "runtimeError") {
+      state = { ...state, runtimeStatus: "error", runtimeMessage: "启动失败，请重试。" };
+    }
+    if (scenario === "normal") {
+      void refreshRooms();
+      return;
+    }
     render();
     return;
   }
@@ -443,6 +556,11 @@ async function handleAction(action: string, roomId?: string, value?: string): Pr
     return;
   }
 
+  if (action === "set-overlay-size" && isOverlaySizeLevel(value)) {
+    await setOverlaySizeLevel(value);
+    return;
+  }
+
   if (action === "show-overview" || action === "show-settings") {
     state = {
       ...state,
@@ -458,7 +576,7 @@ async function refreshRooms(): Promise<void> {
   state = { ...state, isLoading: true, errorMessage: null };
   render();
   try {
-    const rooms = await mockAdapters.room.loadRooms();
+    const rooms = await adapters.room.loadRooms();
     state = {
       ...state,
       isLoading: false,
@@ -474,7 +592,9 @@ async function refreshRooms(): Promise<void> {
 }
 
 async function startRuntimeFlow(): Promise<void> {
-  if (!state.selectedRoomId) {
+  const selectedRoomId = state.selectedRoomId;
+
+  if (!selectedRoomId) {
     state = { ...state, errorMessage: "请先选择一个直播间。" };
     render();
     return;
@@ -488,15 +608,14 @@ async function startRuntimeFlow(): Promise<void> {
   };
   render();
   try {
-    await mockAdapters.runtime.start();
+    const runtime = await adapters.runtime.start(selectedRoomId);
     state = {
       ...state,
-      runtimeStatus: "running",
-      runtimeMessage: "辅助服务运行中",
-      lastPush: mockAdapters.push.getPreview(pushIndex++),
+      runtimeStatus: runtime.status,
+      runtimeMessage: runtime.message,
+      lastPush: await adapters.push.getNextPreview(),
     };
-    await openOverlayIfNeeded();
-    await syncOverlayContent();
+    await showOverlayContent();
   } catch {
     state = { ...state, runtimeStatus: "error", runtimeMessage: "启动失败，请重试。", errorMessage: "mock 运行服务启动失败。" };
   }
@@ -504,14 +623,15 @@ async function startRuntimeFlow(): Promise<void> {
 }
 
 async function stopRuntimeFlow(): Promise<void> {
+  clearOverlayHideTimer();
   state = { ...state, runtimeStatus: "paused", runtimeMessage: "正在停止本地辅助服务..." };
   render();
-  await mockAdapters.runtime.stop();
+  const runtime = await adapters.runtime.stop();
   await window.echocue.overlay.close();
   state = {
     ...state,
-    runtimeStatus: "idle",
-    runtimeMessage: "已停止，等待下一次启动。",
+    runtimeStatus: runtime.status,
+    runtimeMessage: runtime.message,
     overlay: { ...state.overlay, isVisible: false },
   };
   render();
@@ -545,32 +665,44 @@ async function toggleOverlay(): Promise<void> {
   }
 
   if (state.overlay.isVisible) {
+    clearOverlayHideTimer();
     await window.echocue.overlay.hide();
     state = { ...state, overlay: { ...state.overlay, isVisible: false } };
   } else {
-    await window.echocue.overlay.open(state.lastPush);
-    await syncOverlaySettings();
-    state = { ...state, overlay: { ...state.overlay, isVisible: true }, errorMessage: null };
+    await showOverlayContent();
+    return;
   }
   await persistClientSettings();
   render();
 }
 
-async function syncOverlayContent(): Promise<void> {
-  if (state.overlay.isVisible && state.lastPush) {
-    await window.echocue.overlay.update(state.lastPush);
-  }
+function renderScenarioLabel(currentScenario: MockScenario): string {
+  return {
+    normal: "当前使用本地 mock",
+    emptyRooms: "直播间空态预览",
+    roomError: "直播间错误预览",
+    runtimeError: "运行错误预览",
+    emptyPush: "推送空态预览",
+  }[currentScenario];
 }
 
-async function openOverlayIfNeeded(): Promise<void> {
-  if (state.overlay.isVisible || !state.lastPush) {
+async function showOverlayContent(): Promise<void> {
+  if (!state.lastPush) {
+    clearOverlayHideTimer();
     return;
   }
 
-  await window.echocue.overlay.open(state.lastPush);
+  if (state.overlay.isVisible) {
+    await window.echocue.overlay.update(state.lastPush);
+  } else {
+    await window.echocue.overlay.open(state.lastPush);
+  }
+
   await syncOverlaySettings();
   state = { ...state, overlay: { ...state.overlay, isVisible: true }, errorMessage: null };
+  scheduleOverlayAutoHide();
   await persistClientSettings();
+  render();
 }
 
 async function syncOverlaySettings(): Promise<void> {
@@ -579,6 +711,7 @@ async function syncOverlaySettings(): Promise<void> {
     window.echocue.overlay.setOpacity(state.overlay.opacity),
     window.echocue.overlay.setIgnoreMouseEvents(state.overlay.clickThrough),
     window.echocue.overlay.setFontScale(state.overlay.fontScale),
+    window.echocue.overlay.setSizeLevel(state.overlay.sizeLevel),
     window.echocue.overlay.setTheme(state.overlay.theme),
   ]);
 }
@@ -586,6 +719,34 @@ async function syncOverlaySettings(): Promise<void> {
 async function setOverlayAlwaysOnTop(alwaysOnTop: boolean): Promise<void> {
   await window.echocue.overlay.setAlwaysOnTop(alwaysOnTop);
   state = { ...state, overlay: { ...state.overlay, alwaysOnTop } };
+  await persistClientSettings();
+  render();
+}
+
+function scheduleOverlayAutoHide(): void {
+  clearOverlayHideTimer();
+
+  overlayHideTimer = window.setTimeout(() => {
+    void hideOverlayAfterTimeout();
+  }, overlayDisplayDurationMs);
+}
+
+function clearOverlayHideTimer(): void {
+  if (overlayHideTimer !== null) {
+    window.clearTimeout(overlayHideTimer);
+    overlayHideTimer = null;
+  }
+}
+
+async function hideOverlayAfterTimeout(): Promise<void> {
+  overlayHideTimer = null;
+
+  if (!state.overlay.isVisible) {
+    return;
+  }
+
+  await window.echocue.overlay.hide();
+  state = { ...state, overlay: { ...state.overlay, isVisible: false } };
   await persistClientSettings();
   render();
 }
@@ -600,6 +761,13 @@ async function setOverlayClickThrough(clickThrough: boolean): Promise<void> {
 async function setOverlayTheme(theme: OverlayTheme): Promise<void> {
   await window.echocue.overlay.setTheme(theme);
   state = { ...state, overlay: { ...state.overlay, theme } };
+  await persistClientSettings();
+  render();
+}
+
+async function setOverlaySizeLevel(sizeLevel: OverlaySizeLevel): Promise<void> {
+  await window.echocue.overlay.setSizeLevel(sizeLevel);
+  state = { ...state, overlay: { ...state.overlay, sizeLevel } };
   await persistClientSettings();
   render();
 }
@@ -657,9 +825,66 @@ function snapshotClientSettings(): ClientSettings {
       opacity: state.overlay.opacity,
       fontScale: state.overlay.fontScale,
       theme: state.overlay.theme,
+      sizeLevel: state.overlay.sizeLevel,
     },
     workspaceView: state.workspaceView,
   };
+}
+
+function captureScrollState(): { contentTop: number; sidebarTop: number; documentTop: number } {
+  const content = root.querySelector<HTMLElement>(".content");
+  const sidebar = root.querySelector<HTMLElement>(".sidebar");
+  const documentScroller = document.scrollingElement;
+
+  return {
+    contentTop: content?.scrollTop ?? 0,
+    sidebarTop: sidebar?.scrollTop ?? 0,
+    documentTop: documentScroller?.scrollTop ?? 0,
+  };
+}
+
+function restoreScrollState(scrollState: { contentTop: number; sidebarTop: number; documentTop: number }): void {
+  const content = root.querySelector<HTMLElement>(".content");
+  const sidebar = root.querySelector<HTMLElement>(".sidebar");
+  const documentScroller = document.scrollingElement;
+
+  if (content) {
+    content.scrollTop = scrollState.contentTop;
+  }
+  if (sidebar) {
+    sidebar.scrollTop = scrollState.sidebarTop;
+  }
+  if (documentScroller) {
+    documentScroller.scrollTop = scrollState.documentTop;
+  }
+
+  window.requestAnimationFrame(() => {
+    const nextContent = root.querySelector<HTMLElement>(".content");
+    const nextSidebar = root.querySelector<HTMLElement>(".sidebar");
+    const nextDocumentScroller = document.scrollingElement;
+
+    if (nextContent) {
+      nextContent.scrollTop = scrollState.contentTop;
+    }
+    if (nextSidebar) {
+      nextSidebar.scrollTop = scrollState.sidebarTop;
+    }
+    if (nextDocumentScroller) {
+      nextDocumentScroller.scrollTop = scrollState.documentTop;
+    }
+  });
+}
+
+function isOverlaySizeLevel(value: string | undefined): value is OverlaySizeLevel {
+  return value === "small" || value === "medium" || value === "large";
+}
+
+function getOverlaySizeLabel(sizeLevel: OverlaySizeLevel): string {
+  return { small: "小", medium: "中", large: "大" }[sizeLevel];
+}
+
+function getOverlaySizeDescription(sizeLevel: OverlaySizeLevel): string {
+  return { small: "660 x 300", medium: "820 x 390", large: "980 x 480" }[sizeLevel];
 }
 
 async function persistClientSettings(): Promise<void> {

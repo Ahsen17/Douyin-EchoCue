@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 type OverlayPayload = {
+  userName: string;
   commentDisplay: string;
   quickReply: string;
   cue: string;
@@ -8,12 +9,14 @@ type OverlayPayload = {
 };
 
 type OverlayTheme = "light" | "dark";
+type OverlaySizeLevel = "small" | "medium" | "large";
 type OverlayPreferences = {
   alwaysOnTop: boolean;
   clickThrough: boolean;
   opacity: number;
   fontScale: number;
   theme: OverlayTheme;
+  sizeLevel: OverlaySizeLevel;
 };
 type ClientSettings = {
   overlay: OverlayPreferences;
@@ -29,6 +32,11 @@ type OverlayUpdate = {
 const clientApi = {
   platform: process.platform,
   isDevelopment: process.argv.includes("--echocue-development"),
+  window: {
+    minimize: (): Promise<void> => ipcRenderer.invoke("window:minimize"),
+    toggleMaximize: (): Promise<void> => ipcRenderer.invoke("window:toggle-maximize"),
+    close: (): Promise<void> => ipcRenderer.invoke("window:close"),
+  },
   overlay: {
     open: (payload: OverlayPayload): Promise<void> => ipcRenderer.invoke("overlay:open", payload),
     update: (payload: OverlayPayload): Promise<void> => ipcRenderer.invoke("overlay:update", payload),
@@ -41,6 +49,8 @@ const clientApi = {
     setIgnoreMouseEvents: (enabled: boolean): Promise<void> =>
       ipcRenderer.invoke("overlay:set-ignore-mouse-events", enabled),
     setFontScale: (fontScale: number): Promise<void> => ipcRenderer.invoke("overlay:set-font-scale", fontScale),
+    setSizeLevel: (sizeLevel: OverlaySizeLevel): Promise<void> =>
+      ipcRenderer.invoke("overlay:set-size-level", sizeLevel),
     setTheme: (theme: OverlayTheme): Promise<void> => ipcRenderer.invoke("overlay:set-theme", theme),
     onUpdate: (callback: (update: OverlayUpdate) => void): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, update: OverlayUpdate): void => callback(update);
