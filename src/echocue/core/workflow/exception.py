@@ -8,6 +8,7 @@ __all__ = (
     "WorkflowInterestInputRoomMismatchError",
     "WorkflowPersonaContextNotFoundError",
     "WorkflowPersonaContextRoomMismatchError",
+    "WorkflowReplyInputRoomMismatchError",
     "WorkflowSemanticClassificationRoomMismatchError",
 )
 
@@ -44,6 +45,18 @@ class WorkflowPersonaContextRoomMismatchError(ApplicationError):
 
         super().__init__(
             (f"Published persona context room {persona_room_id} does not match workflow room {workflow_room_id}."),
+            status_code=HTTP_400_BAD_REQUEST,
+        )
+
+
+class WorkflowReplyInputRoomMismatchError(ApplicationError):
+    """Raised when ReplyAgent input does not belong to the workflow room."""
+
+    def __init__(self, workflow_room_id: str, reply_room_id: str) -> None:
+        """Initialize the ReplyAgent input room mismatch error."""
+
+        super().__init__(
+            f"ReplyAgent input room {reply_room_id} does not match workflow room {workflow_room_id}.",
             status_code=HTTP_400_BAD_REQUEST,
         )
 

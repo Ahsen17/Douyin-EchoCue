@@ -5,9 +5,9 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from msgspec import field
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
-from echocue.base import BaseStruct, CamelizedBaseStruct
+from echocue.base import BaseModel, BaseStruct, CamelizedBaseStruct
 from echocue.core.lexicon import SemanticClassificationCandidateStruct, SemanticType
 
 from .enum import (
@@ -21,6 +21,9 @@ __all__ = (
     "InterestAgentExecutionConfigStruct",
     "InterestAgentInputStruct",
     "InterestAgentOutput",
+    "ReplyAgentExecutionConfigStruct",
+    "ReplyAgentInputStruct",
+    "ReplyAgentOutput",
     "WorkflowPersonaContextStruct",
     "WorkflowPushAction",
     "WorkflowRunStruct",
@@ -76,6 +79,37 @@ class WorkflowPersonaContextStruct(BaseStruct):
     persona_name: str | None = None
     persona_summary: str | None = None
     source: str = "current_published"
+
+
+class ReplyAgentInputStruct(BaseStruct):
+    """Selected comment and persona context passed to the ReplyAgent."""
+
+    room_id: str
+    persona_context: WorkflowPersonaContextStruct
+    selected_comment: SemanticClassificationCandidateStruct
+    interest_score: float
+    interest_type: SemanticType
+    interest_reason: str
+
+
+class ReplyAgentExecutionConfigStruct(BaseStruct):
+    """Runtime metadata and retry limits used by the ReplyAgent."""
+
+    agent_name: str = "reply_agent"
+    max_attempts: int = 3
+    provider_name: str | None = None
+    model_id: str | None = None
+
+
+class ReplyAgentOutput(BaseModel):
+    """Validated ReplyAgent output."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    comment_display: Annotated[str, Field(min_length=1)]
+    quick_reply: Annotated[str, Field(min_length=1)]
+    cue: Annotated[str, Field(min_length=1)]
+    confidence: Annotated[float, Field(ge=0, le=1)]
 
 
 class WorkflowStageAttemptStruct(BaseStruct):

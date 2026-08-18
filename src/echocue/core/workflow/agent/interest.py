@@ -1,15 +1,20 @@
 """InterestAgent execution and structured retry handling for workflow runs."""
 
 import json
-from collections.abc import Sequence
 from datetime import UTC, datetime
 
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.messages import StructuredMessage, TextMessage
-from autogen_core.models import AssistantMessage, ChatCompletionClient, LLMMessage
-from pydantic import BaseModel, ValidationError
+from autogen_core.models import ChatCompletionClient
+from pydantic import ValidationError
 
+from echocue.base import BaseModel
 from echocue.core.lexicon import SemanticType
+from echocue.core.workflow.agent.handler import (
+    WorkflowAgentAttemptRunner,
+    WorkflowAgentInvocationError,
+    find_latest_assistant_output,
+)
 from echocue.core.workflow.enum import WorkflowStageName
 from echocue.core.workflow.exception import WorkflowInterestInputRoomMismatchError
 from echocue.core.workflow.schema import (
@@ -34,15 +39,8 @@ _INITIAL_TASK = "Evaluate the supplied semantic classification input and return 
 _RETRY_INSTRUCTION = "Correct the previous output and return only a result that conforms to the requested schema."
 
 
-class InterestAgentInvocationError(Exception):
+class InterestAgentInvocationError(WorkflowAgentInvocationError):
     """Structured output parsing failure with the model's raw response."""
-
-    def __init__(self, raw_output: object | None, cause: ValidationError) -> None:
-        """Initialize the parsing failure details."""
-
-        self.raw_output = raw_output
-        self.cause = cause
-        super().__init__(str(cause))
 
 
 class AutoGenInterestAgent:
@@ -61,7 +59,7 @@ class AutoGenInterestAgent:
             result = await self._agent.run(task=TextMessage(content=task, source="user"))
         except ValidationError as exc:
             messages_after_failure = await self._agent.model_context.get_messages()
-            raw_output = _find_latest_assistant_output(messages_after_failure[len(messages_before_run) :])
+            raw_output = find_latest_assistant_output(messages_after_failure[len(messages_before_run) :])
             raise InterestAgentInvocationError(raw_output, exc) from exc
 
         if not result.messages:
@@ -124,6 +122,12 @@ class WorkflowInterestHandler:
     ) -> None:
         self._agent_factory = agent_factory
         self._config = config or InterestAgentExecutionConfigStruct()
+        self._attempt_runner = WorkflowAgentAttemptRunner[InterestAgentOutput](
+            stage_name=WorkflowStageName.INTEREST_STAGE,
+            provider_name=self._config.provider_name,
+            model_id=self._config.model_id,
+            invocation_failure_message="Interest agent invocation failed.",
+        )
 
     async def evaluate_workflow_run(
         self,
@@ -139,33 +143,22 @@ class WorkflowInterestHandler:
 
         started_at = evaluated_at or datetime.now(UTC)
         agent = self._agent_factory.create(data)
-        attempts: list[WorkflowStageAttemptStruct] = []
-        correction_context: dict[str, object] | None = None
-
-        for attempt_index in range(1, max(self._config.max_attempts, 1) + 1):
-            result, attempt = await self._run_attempt(
-                agent,
+        result, attempts = await self._attempt_runner.run(
+            agent.generate,
+            lambda raw_output: self._validate_output(raw_output, data),
+            max_attempts=self._config.max_attempts,
+            occurred_at=evaluated_at,
+        )
+        if result is not None:
+            return self._record_result(
+                workflow_run,
                 data,
-                attempt_index=attempt_index,
-                correction_context=correction_context,
-                evaluated_at=evaluated_at,
+                result,
+                attempts=attempts,
+                started_at=started_at,
+                completed_at=evaluated_at or datetime.now(UTC),
+                fallback_used=False,
             )
-            attempts.append(attempt)
-            if result is not None:
-                return self._record_result(
-                    workflow_run,
-                    data,
-                    result,
-                    attempts=attempts,
-                    started_at=started_at,
-                    completed_at=evaluated_at or datetime.now(UTC),
-                    fallback_used=False,
-                )
-
-            correction_context = {
-                "raw_output": attempt.output.get("raw_output"),
-                "validation_error": attempt.error,
-            }
 
         fallback = self._build_fallback(data)
         return self._record_result(
@@ -182,71 +175,6 @@ class WorkflowInterestHandler:
             },
         )
 
-    async def _run_attempt(
-        self,
-        agent: AutoGenInterestAgent,
-        data: InterestAgentInputStruct,
-        *,
-        attempt_index: int,
-        correction_context: dict[str, object] | None,
-        evaluated_at: datetime | None,
-    ) -> tuple[InterestAgentOutput | None, WorkflowStageAttemptStruct]:
-        started_at = evaluated_at or datetime.now(UTC)
-        raw_output: object | None = None
-
-        try:
-            raw_output = await agent.generate(correction_context)
-            result = self._validate_output(raw_output, data)
-        except InterestAgentInvocationError as exc:
-            completed_at = evaluated_at or datetime.now(UTC)
-            return None, self._build_attempt(
-                attempt_index,
-                started_at=started_at,
-                completed_at=completed_at,
-                correction_context=correction_context,
-                raw_output=exc.raw_output,
-                error={
-                    "type": type(exc.cause).__name__,
-                    "message": str(exc.cause),
-                },
-            )
-        except (TypeError, ValidationError, ValueError) as exc:
-            completed_at = evaluated_at or datetime.now(UTC)
-            return None, self._build_attempt(
-                attempt_index,
-                started_at=started_at,
-                completed_at=completed_at,
-                correction_context=correction_context,
-                raw_output=raw_output,
-                error={
-                    "type": type(exc).__name__,
-                    "message": str(exc),
-                },
-            )
-        # The agent is an external model boundary; failures are recorded and retried before fallback.
-        except Exception as exc:  # noqa: BLE001
-            completed_at = evaluated_at or datetime.now(UTC)
-            return None, self._build_attempt(
-                attempt_index,
-                started_at=started_at,
-                completed_at=completed_at,
-                correction_context=correction_context,
-                raw_output=raw_output,
-                error={
-                    "type": type(exc).__name__,
-                    "message": "Interest agent invocation failed.",
-                },
-            )
-
-        completed_at = evaluated_at or datetime.now(UTC)
-        return result, self._build_attempt(
-            attempt_index,
-            started_at=started_at,
-            completed_at=completed_at,
-            correction_context=correction_context,
-            raw_output=raw_output,
-        )
-
     def _validate_output(self, raw_output: object, data: InterestAgentInputStruct) -> InterestAgentOutput:
         if isinstance(raw_output, str):
             result = InterestAgentOutput.model_validate_json(raw_output)
@@ -261,31 +189,6 @@ class WorkflowInterestHandler:
             raise ValueError(msg)
 
         return result
-
-    def _build_attempt(
-        self,
-        attempt_index: int,
-        *,
-        started_at: datetime,
-        completed_at: datetime,
-        correction_context: dict[str, object] | None,
-        raw_output: object | None,
-        error: dict[str, str] | None = None,
-    ) -> WorkflowStageAttemptStruct:
-        return WorkflowStageAttemptStruct(
-            stage_name=WorkflowStageName.INTEREST_STAGE,
-            attempt_index=attempt_index,
-            started_at=started_at,
-            completed_at=completed_at,
-            latency_ms=max(round((completed_at - started_at).total_seconds() * 1000), 0),
-            input={
-                "provider_name": self._config.provider_name,
-                "model_id": self._config.model_id,
-                "correction_context": correction_context,
-            },
-            output={"raw_output": _serialize_raw_output(raw_output)},
-            error=error,
-        )
 
     def _record_result(
         self,
@@ -336,18 +239,3 @@ class WorkflowInterestHandler:
             selected_comment_id=candidate.comment_id,
             reason="Semantic classification fallback selected the highest-confidence candidate.",
         )
-
-
-def _find_latest_assistant_output(messages: Sequence[LLMMessage]) -> object | None:
-    for message in reversed(messages):
-        if isinstance(message, AssistantMessage):
-            return message.content
-
-    return None
-
-
-def _serialize_raw_output(raw_output: object | None) -> object:
-    if isinstance(raw_output, BaseModel):
-        return raw_output.model_dump(mode="json")
-
-    return json.loads(json.dumps(raw_output, default=str, ensure_ascii=True))
