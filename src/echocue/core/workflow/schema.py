@@ -26,6 +26,8 @@ __all__ = (
     "WorkflowStageEnvelopeVO",
     "WorkflowStageName",
     "WorkflowStatus",
+    "WorkflowTriggerEvaluationStruct",
+    "WorkflowTriggerParametersStruct",
     "WorkflowTriggerType",
 )
 
@@ -92,6 +94,41 @@ class WorkflowStageEnvelopeVO(CamelizedBaseStruct):
         """Build a view object from a workflow stage envelope."""
 
         return cls(**data.to_dict())
+
+
+class WorkflowTriggerParametersStruct(BaseStruct):
+    """Trigger thresholds and cooldown parameters used by workflow evaluation."""
+
+    minimum_comment_count: int = 1
+    minimum_window_confidence: float = 0
+    high_value_confidence_threshold: float = 0.8
+    high_value_score_threshold: float = 1
+    cooldown_seconds: int = 30
+    high_value_semantic_types: list[SemanticType] = field(
+        default_factory=lambda: [
+            SemanticType.PERSONA_PRAISE,
+            SemanticType.INTERACTIVE_PROMPT,
+            SemanticType.PLAYFUL_JOKE,
+            SemanticType.ATMOSPHERE_BOOST,
+        ]
+    )
+
+
+class WorkflowTriggerEvaluationStruct(BaseStruct):
+    """Result of evaluating whether a comment window should start workflow execution."""
+
+    should_trigger: bool
+    trigger_type: WorkflowTriggerType | None
+    parameters: WorkflowTriggerParametersStruct
+    evaluated_at: datetime
+    last_pushed_at: datetime | None = None
+    blocked_reason: str | None = None
+    cooldown_until: datetime | None = None
+    selected_candidate_id: str | None = None
+    selected_candidate_text: str | None = None
+    selected_candidate_semantic_type: SemanticType | None = None
+    selected_candidate_score: float | None = None
+    selected_candidate_confidence: float | None = None
 
 
 class WorkflowRunStruct(BaseStruct):

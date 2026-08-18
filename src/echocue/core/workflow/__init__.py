@@ -14,8 +14,11 @@ from .schema import (
     WorkflowStageAttemptVO,
     WorkflowStageEnvelopeStruct,
     WorkflowStageEnvelopeVO,
+    WorkflowTriggerEvaluationStruct,
+    WorkflowTriggerParametersStruct,
 )
 from .service import WorkflowRunService
+from .trigger import WorkflowTriggerEvaluator
 
 __all__ = (
     "WorkflowPushAction",
@@ -29,5 +32,8 @@ __all__ = (
     "WorkflowStageEnvelopeVO",
     "WorkflowStageName",
     "WorkflowStatus",
+    "WorkflowTriggerEvaluationStruct",
+    "WorkflowTriggerEvaluator",
+    "WorkflowTriggerParametersStruct",
     "WorkflowTriggerType",
 )
