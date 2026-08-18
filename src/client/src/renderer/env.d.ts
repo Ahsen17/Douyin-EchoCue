@@ -37,5 +37,27 @@ interface Window {
         }) => void,
       ) => () => void;
     };
+    clientSettings: {
+      get: () => Promise<{
+        overlay: {
+          alwaysOnTop: boolean;
+          clickThrough: boolean;
+          opacity: number;
+          fontScale: number;
+          theme: "light" | "dark";
+        };
+        workspaceView: "overview" | "settings";
+      }>;
+      set: (settings: {
+        overlay: {
+          alwaysOnTop: boolean;
+          clickThrough: boolean;
+          opacity: number;
+          fontScale: number;
+          theme: "light" | "dark";
+        };
+        workspaceView: "overview" | "settings";
+      }) => Promise<void>;
+    };
   };
 }

@@ -21,6 +21,10 @@ const clientApi = {
             return () => electron_1.ipcRenderer.removeListener("overlay:update-content", listener);
         },
     },
+    clientSettings: {
+        get: () => electron_1.ipcRenderer.invoke("client-settings:get"),
+        set: (settings) => electron_1.ipcRenderer.invoke("client-settings:set", settings),
+    },
 };
 electron_1.contextBridge.exposeInMainWorld("echocue", clientApi);
 //# sourceMappingURL=preload.js.map

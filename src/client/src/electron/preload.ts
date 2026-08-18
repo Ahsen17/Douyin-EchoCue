@@ -8,6 +8,17 @@ type OverlayPayload = {
 };
 
 type OverlayTheme = "light" | "dark";
+type OverlayPreferences = {
+  alwaysOnTop: boolean;
+  clickThrough: boolean;
+  opacity: number;
+  fontScale: number;
+  theme: OverlayTheme;
+};
+type ClientSettings = {
+  overlay: OverlayPreferences;
+  workspaceView: "overview" | "settings";
+};
 type OverlayUpdate = {
   payload: OverlayPayload;
   fontScale: number;
@@ -36,6 +47,10 @@ const clientApi = {
       ipcRenderer.on("overlay:update-content", listener);
       return () => ipcRenderer.removeListener("overlay:update-content", listener);
     },
+  },
+  clientSettings: {
+    get: (): Promise<ClientSettings> => ipcRenderer.invoke("client-settings:get"),
+    set: (settings: ClientSettings): Promise<void> => ipcRenderer.invoke("client-settings:set", settings),
   },
 };
 

@@ -1,8 +1,10 @@
 import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from "electron";
-import { join } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 const isDevelopment = !app.isPackaged;
 const rendererUrl = process.env.ECHOCUE_RENDERER_URL ?? "http://127.0.0.1:5173";
+const clientSettingsFileName = "client-settings.json";
 
 type OverlayTheme = "light" | "dark";
 const overlayAlwaysOnTopLevel = "screen-saver" as const;
@@ -16,6 +18,17 @@ type OverlayPayload = {
   createdAt: string;
 };
 
+type ClientSettings = {
+  overlay: {
+    alwaysOnTop: boolean;
+    clickThrough: boolean;
+    opacity: number;
+    fontScale: number;
+    theme: OverlayTheme;
+  };
+  workspaceView: "overview" | "settings";
+};
+
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
 let overlayPayload: OverlayPayload | null = null;
@@ -26,6 +39,16 @@ let overlayFontScale = 1;
 let overlayTheme: OverlayTheme = "dark";
 let overlayConstraintTimer: NodeJS.Timeout | null = null;
 let overlayLastTopmostResetAt = 0;
+let clientSettings: ClientSettings = {
+  overlay: {
+    alwaysOnTop: overlayAlwaysOnTop,
+    clickThrough: overlayClickThrough,
+    opacity: overlayOpacity,
+    fontScale: overlayFontScale,
+    theme: overlayTheme,
+  },
+  workspaceView: "overview",
+};
 
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -110,8 +133,73 @@ function createOverlayWindow(): BrowserWindow {
   return window;
 }
 
+function getClientSettingsPath(): string {
+  return join(app.getPath("userData"), clientSettingsFileName);
+}
+
+function sanitizeClientSettings(value: unknown): ClientSettings {
+  if (!value || typeof value !== "object") {
+    return structuredClone(clientSettings);
+  }
+
+  const candidate = value as Partial<ClientSettings> & {
+    overlay?: Partial<ClientSettings["overlay"]>;
+  };
+  const overlay = (candidate.overlay ?? {}) as Record<string, unknown>;
+
+  return {
+    overlay: {
+      alwaysOnTop:
+        typeof overlay.alwaysOnTop === "boolean" ? overlay.alwaysOnTop : clientSettings.overlay.alwaysOnTop,
+      clickThrough:
+        typeof overlay.clickThrough === "boolean" ? overlay.clickThrough : clientSettings.overlay.clickThrough,
+      opacity:
+        typeof overlay.opacity === "number"
+          ? Math.min(1, Math.max(0.35, overlay.opacity))
+          : clientSettings.overlay.opacity,
+      fontScale:
+        typeof overlay.fontScale === "number"
+          ? Math.min(1.35, Math.max(0.85, overlay.fontScale))
+          : clientSettings.overlay.fontScale,
+      theme: overlay.theme === "light" || overlay.theme === "dark" ? overlay.theme : clientSettings.overlay.theme,
+    },
+    workspaceView:
+      candidate.workspaceView === "settings" || candidate.workspaceView === "overview"
+        ? candidate.workspaceView
+        : clientSettings.workspaceView,
+  };
+}
+
+function applyClientSettings(settings: ClientSettings): void {
+  clientSettings = settings;
+  overlayAlwaysOnTop = settings.overlay.alwaysOnTop;
+  overlayClickThrough = settings.overlay.clickThrough;
+  overlayOpacity = settings.overlay.opacity;
+  overlayFontScale = settings.overlay.fontScale;
+  overlayTheme = settings.overlay.theme;
+}
+
+async function loadClientSettings(): Promise<void> {
+  try {
+    const raw = await readFile(getClientSettingsPath(), "utf8");
+    applyClientSettings(sanitizeClientSettings(JSON.parse(raw) as unknown));
+  } catch {
+    applyClientSettings(structuredClone(clientSettings));
+  }
+}
+
+async function saveClientSettings(): Promise<void> {
+  const settingsPath = getClientSettingsPath();
+  await mkdir(dirname(settingsPath), { recursive: true });
+  await writeFile(settingsPath, `${JSON.stringify(clientSettings, null, 2)}\n`, "utf8");
+}
+
 function getOverlayWindow(): BrowserWindow {
   return overlayWindow ?? createOverlayWindow();
+}
+
+function sendClientSettings(): ClientSettings {
+  return structuredClone(clientSettings);
 }
 
 function sendOverlayState(): void {
@@ -298,11 +386,33 @@ function registerOverlayHandlers(): void {
     overlayTheme = theme;
     sendOverlayState();
   });
+  ipcMain.handle("client-settings:get", (event) => {
+    if (!isMainWindowSender(event)) {
+      return sendClientSettings();
+    }
+    return sendClientSettings();
+  });
+  ipcMain.handle("client-settings:set", async (event, value: unknown) => {
+    if (!isMainWindowSender(event)) {
+      return;
+    }
+    applyClientSettings(sanitizeClientSettings(value));
+    try {
+      await saveClientSettings();
+    } catch (error: unknown) {
+      console.error("Failed to persist client settings:", error);
+    }
+    if (overlayWindow && !overlayWindow.isDestroyed()) {
+      applyOverlayWindowSettings(overlayWindow);
+      sendOverlayState();
+    }
+  });
 }
 
 registerOverlayHandlers();
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await loadClientSettings();
   createMainWindow();
 
   app.on("activate", () => {

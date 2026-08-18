@@ -5,6 +5,7 @@ export type RuntimeStatus = "idle" | "starting" | "running" | "paused" | "error"
 export type RoomStatus = "live" | "offline";
 
 export type OverlayTheme = "light" | "dark";
+export type WorkspaceView = "overview" | "settings";
 
 export interface Account {
   displayName: string;
@@ -36,6 +37,19 @@ export interface OverlayConfig {
   theme: OverlayTheme;
 }
 
+export interface OverlayPreferences {
+  alwaysOnTop: boolean;
+  clickThrough: boolean;
+  opacity: number;
+  fontScale: number;
+  theme: OverlayTheme;
+}
+
+export interface ClientSettings {
+  overlay: OverlayPreferences;
+  workspaceView: WorkspaceView;
+}
+
 export interface ClientState {
   screen: ClientScreen;
   isLoading: boolean;
@@ -47,7 +61,7 @@ export interface ClientState {
   runtimeMessage: string;
   lastPush: PushPreview | null;
   overlay: OverlayConfig;
-  overlayDrawerOpen: boolean;
+  workspaceView: WorkspaceView;
 }
 
 export const initialState: ClientState = {
@@ -68,5 +82,16 @@ export const initialState: ClientState = {
     fontScale: 1,
     theme: "dark",
   },
-  overlayDrawerOpen: false,
+  workspaceView: "overview",
+};
+
+export const initialClientSettings: ClientSettings = {
+  overlay: {
+    alwaysOnTop: true,
+    clickThrough: false,
+    opacity: 0.94,
+    fontScale: 1,
+    theme: "dark",
+  },
+  workspaceView: "overview",
 };

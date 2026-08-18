@@ -61,9 +61,24 @@ export function getMockPush(index: number): PushPreview {
   return mockPushes[index % mockPushes.length];
 }
 
+export const mockAdapters = {
+  auth: {
+    signIn,
+  },
+  room: {
+    loadRooms,
+  },
+  runtime: {
+    start: startRuntime,
+    stop: stopRuntime,
+  },
+  push: {
+    getPreview: getMockPush,
+  },
+};
+
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => {
     window.setTimeout(resolve, milliseconds);
   });
 }
-
