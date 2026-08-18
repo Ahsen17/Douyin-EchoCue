@@ -5,8 +5,6 @@ from .enum import (
     WorkflowStageName,
     WorkflowStatus,
     WorkflowTriggerType,
-    ensure_workflow_status_transition,
-    is_valid_workflow_status_transition,
 )
 from .model import WorkflowRuns
 from .schema import (
@@ -32,6 +30,4 @@ __all__ = (
     "WorkflowStageName",
     "WorkflowStatus",
     "WorkflowTriggerType",
-    "ensure_workflow_status_transition",
-    "is_valid_workflow_status_transition",
 )

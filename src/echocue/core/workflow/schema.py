@@ -14,8 +14,6 @@ from .enum import (
     WorkflowStageName,
     WorkflowStatus,
     WorkflowTriggerType,
-    ensure_workflow_status_transition,
-    is_valid_workflow_status_transition,
 )
 
 __all__ = (
@@ -29,8 +27,6 @@ __all__ = (
     "WorkflowStageName",
     "WorkflowStatus",
     "WorkflowTriggerType",
-    "ensure_workflow_status_transition",
-    "is_valid_workflow_status_transition",
 )
 
 

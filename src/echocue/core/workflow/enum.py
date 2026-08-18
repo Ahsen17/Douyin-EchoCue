@@ -7,8 +7,6 @@ __all__ = (
     "WorkflowStageName",
     "WorkflowStatus",
     "WorkflowTriggerType",
-    "ensure_workflow_status_transition",
-    "is_valid_workflow_status_transition",
 )
 
 

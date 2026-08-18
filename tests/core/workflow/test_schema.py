@@ -12,6 +12,8 @@ from echocue.core.workflow import (
     WorkflowStageName,
     WorkflowStatus,
     WorkflowTriggerType,
+)
+from echocue.core.workflow.enum import (
     ensure_workflow_status_transition,
     is_valid_workflow_status_transition,
 )
