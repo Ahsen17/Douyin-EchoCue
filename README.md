@@ -17,6 +17,25 @@ It helps turn live chat into faster replies, more consistent prompting, and a sm
 - A team wants to keep responses consistent with the room's tone and style.
 - An operator wants a structured way to assist with live interaction without interrupting the show.
 
+## MVP Roadmap
+
+- [x] M1 Foundation - backend skeleton, PostgreSQL, Redis, Qdrant, and local runtime.
+- [x] M2 Ingestion and classification - live status, comment windowing, and lexicon gRPC.
+- [x] M3 Workflow core - trigger, InterestAgent, ReplyAgent, review, and persistence.
+- [ ] M4 Auth service - account, permission context, login, and access checks.
+- [ ] M5 Web admin - profile, triggers, rules, and Workflow review.
+- [ ] M6 Windows client - Electron client, floating window, and push delivery.
+- [ ] M7 Observability - Prometheus / OpenTelemetry metrics, traces, and logs.
+- [ ] M8 End-to-end acceptance - demo flow, seeded data, and final validation.
+
+### Distributed Services
+
+| Service | Role |
+| --- | --- |
+| `app` | Main backend that coordinates login, workflow execution, persistence, and client delivery. |
+| `lexicon` | Live comment semantic classification service for interaction typing and candidate retrieval. |
+| `auth` | Account and permission service for credential checks, account context, and access decisions. |
+
 ## Requirements
 
 - Python 3.12
@@ -76,22 +95,22 @@ uv run app database check
 Build and start services:
 
 ```bash
-make compose-build
-make compose-up
+make compose build
+make compose up
 ```
 
 Start or operate on a single service:
 
 ```bash
-make compose-up SERVICE=postgres
-make compose-build SERVICE=app
-make compose-logs SERVICE=app
+make compose up postgres
+make compose build app
+make compose logs app
 ```
 
 Stop services:
 
 ```bash
-make compose-down
+make compose down
 ```
 
 The Compose app service builds the local Docker image from `Dockerfile`. The database service uses a PostgreSQL

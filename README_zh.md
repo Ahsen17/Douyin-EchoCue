@@ -17,6 +17,25 @@ Douyin-EchoCue 是一个面向抖音直播场景的互动辅助工具，服务�
 - 团队希望回复风格与直播间人设保持一致。
 - 运营希望在不打断直播流程的前提下，提供结构化的互动支持。
 
+## MVP Roadmap
+
+- [x] M1 基础工程 - 后端骨架、PostgreSQL、Redis、Qdrant 和本地运行环境。
+- [x] M2 接入与分类 - 直播状态、弹幕窗口和 lexicon gRPC。
+- [x] M3 Workflow 主链路 - 触发、InterestAgent、ReplyAgent、审核和持久化。
+- [ ] M4 账号权限服务 - 账号、权限上下文、登录和访问校验。
+- [ ] M5 Web 管理端 - 主体档案、触发配置、规则和 Workflow 回放。
+- [ ] M6 Windows client - Electron client、浮窗展示和推送联调。
+- [ ] M7 观测能力 - Prometheus / OpenTelemetry 指标、链路和日志。
+- [ ] M8 端到端验收 - 演示流程、种子数据和最终验证。
+
+### 分布式服务
+
+| 服务 | 作用 |
+| --- | --- |
+| `app` | 主后端，负责登录、Workflow 执行、持久化和向 client 推送结果。 |
+| `lexicon` | 直播弹幕语义分类服务，负责互动类型识别和候选弹幕召回。 |
+| `auth` | 账号与权限服务，负责凭据校验、账号上下文和访问决策。 |
+
 ## 环境要求
 
 - Python 3.12
@@ -75,22 +94,22 @@ uv run app database check
 构建并启动服务：
 
 ```bash
-make compose-build
-make compose-up
+make compose build
+make compose up
 ```
 
 启动或操作单个服务：
 
 ```bash
-make compose-up SERVICE=postgres
-make compose-build SERVICE=app
-make compose-logs SERVICE=app
+make compose up postgres
+make compose build app
+make compose logs app
 ```
 
 停止服务：
 
 ```bash
-make compose-down
+make compose down
 ```
 
 Compose 中的 app 服务会基于 `Dockerfile` 构建本地镜像，数据库服务直接使用 PostgreSQL 镜像。
