@@ -17,6 +17,7 @@ from .enum import (
 )
 
 __all__ = (
+    "WorkflowPersonaContextStruct",
     "WorkflowPushAction",
     "WorkflowRunStruct",
     "WorkflowRunVO",
@@ -30,6 +31,18 @@ __all__ = (
     "WorkflowTriggerParametersStruct",
     "WorkflowTriggerType",
 )
+
+
+class WorkflowPersonaContextStruct(BaseStruct):
+    """Frozen published persona context for a workflow run."""
+
+    room_id: str
+    persona_id: UUID
+    persona_version: int
+    published_at: datetime | None = None
+    persona_name: str | None = None
+    persona_summary: str | None = None
+    source: str = "current_published"
 
 
 class WorkflowStageAttemptStruct(BaseStruct):
