@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from types import TracebackType
 from typing import Any, Self, cast
 
 import pytest
@@ -16,7 +17,7 @@ from echocue.core.live import CommentPayloadStruct, CommentWindowHandler, LiveCo
 
 
 class FakeGrpcContext:
-    async def abort(self, code: object, details: str) -> None:
+    async def abort(self, code: Any, details: str) -> None:
         raise RuntimeError(details)
 
 
@@ -53,7 +54,12 @@ class TestSemanticClassificationGrpc:
             async def __aenter__(self) -> Self:
                 return self
 
-            async def __aexit__(self, exc_type: object, exc: object, traceback: object) -> None:
+            async def __aexit__(
+                self,
+                exc_type: type[BaseException] | None,
+                exc: BaseException | None,
+                traceback: TracebackType | None,
+            ) -> None:
                 return None
 
             def unary_unary(
