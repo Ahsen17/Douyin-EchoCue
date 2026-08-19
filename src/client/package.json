@@ -5,8 +5,8 @@
   "description": "Electron client for Douyin-EchoCue.",
   "main": "dist-electron/main.js",
   "engines": {
-    "node": ">=18.18.0",
-    "npm": ">=9.0.0"
+    "node": ">=24.0.0",
+    "npm": ">=10.0.0"
   },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
@@ -21,10 +21,10 @@
     "@fontsource/noto-sans-sc": "^5.2.5"
   },
   "devDependencies": {
-    "@types/node": "^22.15.21",
+    "@types/node": "^24.0.0",
     "concurrently": "^9.1.2",
-    "electron": "^36.4.0",
-    "electron-builder": "^26.0.12",
+    "electron": "^36.9.5",
+    "electron-builder": "^26.15.3",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "wait-on": "^8.0.3"

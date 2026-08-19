@@ -6,8 +6,8 @@ M6 Mock-first stages.
 
 ## Prerequisites
 
-- Node.js 18 or newer
-- npm 9 or newer
+- Node.js 24 or newer
+- npm 10 or newer
 - Windows verification environment for Electron window behavior
 
 ## Commands

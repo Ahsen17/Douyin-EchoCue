@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, ipcMain, screen, type IpcMainInvokeEvent } from "electron";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { release } from "node:os";
 import { dirname, join } from "node:path";
 
 const isDevelopment = !app.isPackaged;
@@ -16,6 +17,22 @@ const overlaySizePresets: Record<OverlaySizeLevel, { width: number; height: numb
   medium: { width: 820, height: 390 },
   large: { width: 980, height: 480 },
 };
+
+function isWslRuntime(): boolean {
+  return process.platform === "linux"
+    && (Boolean(process.env.WSL_DISTRO_NAME) || release().toLowerCase().includes("microsoft"));
+}
+
+function configureGpuCompatibility(): void {
+  if (!isWslRuntime() || process.env.ECHOCUE_ENABLE_GPU === "1") {
+    return;
+  }
+
+  app.disableHardwareAcceleration();
+  app.commandLine.appendSwitch("disable-gpu");
+}
+
+configureGpuCompatibility();
 
 type OverlayPayload = {
   userName: string;
