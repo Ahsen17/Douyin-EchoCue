@@ -65,6 +65,11 @@ class FakeAuthHandler(AuthPermissionHandler):
         )
 
 
+class FailingAuthHandler(AuthPermissionHandler):
+    async def authenticate(self, request: Any) -> AuthenticationResultStruct:
+        raise RuntimeError("postgresql://user:password@db/internal")
+
+
 class FakeUnaryUnaryCall:
     def __init__(
         self, request_serializer: Any, response_deserializer: Any, method: str, service: AuthGrpcService
@@ -187,6 +192,18 @@ class TestAuthGrpc:
         assert response.user.email == "user@example.test"
         assert response.context.user.id == response.user.id
         assert response.context.certification.status == proto.CERTIFICATION_STATUS_UNSPECIFIED
+
+    async def test_service_adapter_hides_internal_error_details(self) -> None:
+        proto = cast("Any", auth_service_pb2)
+        service = AuthGrpcService(FailingAuthHandler())
+
+        with pytest.raises(RuntimeError, match="Auth service internal error") as exc_info:
+            await service.Authenticate(
+                proto.AuthenticateRequest(username="member", password="member-password"),
+                FakeGrpcContext(),
+            )
+
+        assert "postgresql://" not in str(exc_info.value)
 
     async def test_generated_stub_checks_permission_through_service_adapter(self) -> None:
         proto = cast("Any", auth_service_pb2)

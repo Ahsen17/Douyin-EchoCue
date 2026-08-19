@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, NoReturn, cast, override
 from uuid import UUID
 
 import grpc  # type: ignore[import-untyped]
+import structlog
 from litestar.exceptions import NotAuthorizedException, ServiceUnavailableException
 
 from .enum import (
@@ -42,6 +43,8 @@ __all__ = (
 
 _PROTO = cast("Any", auth_service_pb2)
 _PROTO_GRPC = cast("Any", auth_service_pb2_grpc)
+_LOGGER = structlog.stdlib.get_logger(__name__)
+_INTERNAL_ERROR_DETAIL = "Auth service internal error."
 _CERTIFICATION_STATUS_TO_PROTO: dict[AccountCertificationStatus, int] = {
     AccountCertificationStatus.UNCERTIFIED: _PROTO.CERTIFICATION_STATUS_UNCERTIFIED,
     AccountCertificationStatus.PERSONAL_CERTIFIED: _PROTO.CERTIFICATION_STATUS_PERSONAL_CERTIFIED,
@@ -165,7 +168,7 @@ class AuthGrpcService(auth_service_pb2_grpc.AuthServiceServicer):
             await context.abort(grpc.StatusCode.UNAUTHENTICATED, exc.detail or "Authentication failed.")
             raise RuntimeError("unreachable") from exc
         except Exception as exc:
-            await context.abort(grpc.StatusCode.INTERNAL, str(exc))
+            await _abort_internal(context, operation="authenticate", exc=exc)
             raise RuntimeError("unreachable") from exc
 
         return _authentication_result_to_proto(result)
@@ -187,7 +190,7 @@ class AuthGrpcService(auth_service_pb2_grpc.AuthServiceServicer):
             await context.abort(grpc.StatusCode.UNAUTHENTICATED, exc.detail or "Authentication required.")
             raise RuntimeError("unreachable") from exc
         except Exception as exc:
-            await context.abort(grpc.StatusCode.INTERNAL, str(exc))
+            await _abort_internal(context, operation="get_permission_context", exc=exc)
             raise RuntimeError("unreachable") from exc
 
         return _PROTO.PermissionContextResponse(context=_permission_context_to_proto(permission_context))
@@ -215,7 +218,7 @@ class AuthGrpcService(auth_service_pb2_grpc.AuthServiceServicer):
             await context.abort(grpc.StatusCode.UNAUTHENTICATED, exc.detail or "Authentication required.")
             raise RuntimeError("unreachable") from exc
         except Exception as exc:
-            await context.abort(grpc.StatusCode.INTERNAL, str(exc))
+            await _abort_internal(context, operation="check_permission", exc=exc)
             raise RuntimeError("unreachable") from exc
 
         return _permission_check_result_to_proto(result)
@@ -495,3 +498,13 @@ def _raise_http_exception_from_rpc_error(exc: "grpc.aio.AioRpcError") -> NoRetur
         raise NotAuthorizedException(detail=exc.details() or "Invalid auth request.") from exc
 
     raise ServiceUnavailableException(detail="Auth service unavailable.") from exc
+
+
+async def _abort_internal(
+    context: "grpc.aio.ServicerContext[Any, Any]",
+    *,
+    operation: str,
+    exc: Exception,
+) -> None:
+    _LOGGER.exception("Auth gRPC internal error.", operation=operation, error_type=type(exc).__name__)
+    await context.abort(grpc.StatusCode.INTERNAL, _INTERNAL_ERROR_DETAIL)
