@@ -2,9 +2,13 @@ from types import TracebackType
 from typing import Any, Self, cast
 from uuid import uuid4
 
+import pytest
+
 from echocue.auth import (
     AuthenticationResultStruct,
     AuthPermissionHandler,
+    GrpcAuthPermissionClient,
+    LoginRequest,
     PermissionAction,
     PermissionCheckRequestStruct,
     PermissionCheckResultStruct,
@@ -35,6 +39,19 @@ class FakeAuthHandler(AuthPermissionHandler):
         context = PermissionContextStruct(user=user)
 
         return AuthenticationResultStruct(user=user, context=context)
+
+    async def get_permission_context(self, user_id: Any) -> PermissionContextStruct:
+        assert user_id == self.user_id
+
+        return PermissionContextStruct(
+            user=UserStruct(
+                id=self.user_id,
+                username="member",
+                email="user@example.test",
+                is_active=True,
+                is_superuser=False,
+            )
+        )
 
     async def check_permission(self, request: PermissionCheckRequestStruct) -> PermissionCheckResultStruct:
         assert request.user_id == self.user_id
@@ -69,6 +86,9 @@ class FakeUnaryUnaryCall:
         if self._method == "/echocue.auth.AuthService/Authenticate":
             decoded_request = proto.AuthenticateRequest.FromString(self._request_serializer(request))
             encoded_result = await self._service.Authenticate(decoded_request, FakeGrpcContext())
+        elif self._method == "/echocue.auth.AuthService/GetPermissionContext":
+            decoded_request = proto.PermissionContextRequest.FromString(self._request_serializer(request))
+            encoded_result = await self._service.GetPermissionContext(decoded_request, FakeGrpcContext())
         elif self._method == "/echocue.auth.AuthService/CheckPermission":
             decoded_request = proto.PermissionCheckRequest.FromString(self._request_serializer(request))
             encoded_result = await self._service.CheckPermission(decoded_request, FakeGrpcContext())
@@ -106,6 +126,52 @@ class FakeChannel:
 
 
 class TestAuthGrpc:
+    async def test_client_authenticates_through_generated_stub(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        service = AuthGrpcService(FakeAuthHandler())
+        monkeypatch.setattr("echocue.auth.rpc.grpc.aio.insecure_channel", lambda target: FakeChannel(service))
+        client = GrpcAuthPermissionClient("auth:50052", timeout=2.5)
+
+        response = await client.authenticate(
+            LoginRequest(
+                username="member",
+                password="member-password",
+            )
+        )
+
+        assert response.user.username == "member"
+        assert response.context.user.id == response.user.id
+
+    async def test_client_gets_permission_context_through_generated_stub(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        handler = FakeAuthHandler()
+        service = AuthGrpcService(handler)
+        monkeypatch.setattr("echocue.auth.rpc.grpc.aio.insecure_channel", lambda target: FakeChannel(service))
+        client = GrpcAuthPermissionClient("auth:50052")
+
+        response = await client.get_permission_context(handler.user_id)
+
+        assert response.user.id == handler.user_id
+        assert response.user.email == "user@example.test"
+
+    async def test_client_checks_permission_through_generated_stub(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        handler = FakeAuthHandler()
+        service = AuthGrpcService(handler)
+        monkeypatch.setattr("echocue.auth.rpc.grpc.aio.insecure_channel", lambda target: FakeChannel(service))
+        client = GrpcAuthPermissionClient("auth:50052")
+
+        response = await client.check_permission(
+            PermissionCheckRequestStruct(
+                user_id=handler.user_id,
+                room_id="room-a",
+                action=PermissionAction.START,
+            )
+        )
+
+        assert response.allowed is True
+        assert response.matched_scope is RoomAuthorizationScope.START
+
     async def test_generated_stub_authenticates_through_service_adapter(self) -> None:
         proto = cast("Any", auth_service_pb2)
         grpc_proto = cast("Any", auth_service_pb2_grpc)

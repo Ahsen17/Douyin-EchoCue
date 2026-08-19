@@ -1,10 +1,11 @@
 """gRPC transport for the authentication service."""
 
-from typing import TYPE_CHECKING, Any, cast, override
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, NoReturn, cast, override
 from uuid import UUID
 
 import grpc  # type: ignore[import-untyped]
-from litestar.exceptions import NotAuthorizedException
+from litestar.exceptions import NotAuthorizedException, ServiceUnavailableException
 
 from .enum import (
     AccountCertificationStatus,
@@ -33,7 +34,10 @@ from .schema import (
 if TYPE_CHECKING:
     from grpc import aio
 
-__all__ = ("AuthGrpcService", "create_auth_grpc_server")
+__all__ = (
+    "AuthGrpcService",
+    "GrpcAuthPermissionClient",
+)
 
 
 _PROTO = cast("Any", auth_service_pb2)
@@ -73,6 +77,70 @@ _PERMISSION_ACTION_TO_PROTO: dict[PermissionAction, int] = {
 _PROTO_TO_PERMISSION_ACTION: dict[int, PermissionAction] = {
     proto_value: action for action, proto_value in _PERMISSION_ACTION_TO_PROTO.items()
 }
+_PROTO_TO_CERTIFICATION_STATUS: dict[int, AccountCertificationStatus] = {
+    proto_value: status for status, proto_value in _CERTIFICATION_STATUS_TO_PROTO.items()
+}
+_PROTO_TO_ORGANIZATION_MEMBER_ROLE: dict[int, OrganizationMemberRole] = {
+    proto_value: role for role, proto_value in _ORGANIZATION_MEMBER_ROLE_TO_PROTO.items()
+}
+_PROTO_TO_ROOM_OWNERSHIP_KIND: dict[int, RoomOwnershipKind] = {
+    proto_value: kind for kind, proto_value in _ROOM_OWNERSHIP_KIND_TO_PROTO.items()
+}
+_PROTO_TO_ROOM_AUTHORIZATION_STATUS: dict[int, RoomAuthorizationStatus] = {
+    proto_value: status for status, proto_value in _ROOM_AUTHORIZATION_STATUS_TO_PROTO.items()
+}
+_PROTO_TO_ROOM_AUTHORIZATION_SCOPE: dict[int, RoomAuthorizationScope] = {
+    proto_value: scope for scope, proto_value in _ROOM_AUTHORIZATION_SCOPE_TO_PROTO.items()
+}
+
+
+class GrpcAuthPermissionClient:
+    """Authentication and authorization client backed by the auth gRPC service."""
+
+    def __init__(self, target: str, *, timeout: float = 1.0) -> None:
+        self._target = target
+        self._timeout = timeout
+
+    async def authenticate(self, request: LoginRequest) -> AuthenticationResultStruct:
+        """Authenticate credentials through the remote auth service."""
+
+        try:
+            async with grpc.aio.insecure_channel(self._target) as channel:
+                stub = cast("Any", auth_service_pb2_grpc.AuthServiceStub)(channel)
+                response = await stub.Authenticate(_login_request_to_proto(request), timeout=self._timeout)
+        except grpc.aio.AioRpcError as exc:
+            _raise_http_exception_from_rpc_error(exc)
+
+        return _authentication_result_from_proto(response)
+
+    async def get_permission_context(self, user_id: UUID) -> PermissionContextStruct:
+        """Fetch the full permission context through the remote auth service."""
+
+        try:
+            async with grpc.aio.insecure_channel(self._target) as channel:
+                stub = cast("Any", auth_service_pb2_grpc.AuthServiceStub)(channel)
+                response = await stub.GetPermissionContext(
+                    _PROTO.PermissionContextRequest(user_id=str(user_id)),
+                    timeout=self._timeout,
+                )
+        except grpc.aio.AioRpcError as exc:
+            _raise_http_exception_from_rpc_error(exc)
+
+        return _permission_context_from_proto(response.context)
+
+    async def check_permission(self, request: PermissionCheckRequestStruct) -> PermissionCheckResultStruct:
+        """Check room permission through the remote auth service."""
+
+        try:
+            async with grpc.aio.insecure_channel(self._target) as channel:
+                stub = cast("Any", auth_service_pb2_grpc.AuthServiceStub)(channel)
+                response = await stub.CheckPermission(
+                    _permission_check_request_to_proto(request), timeout=self._timeout
+                )
+        except grpc.aio.AioRpcError as exc:
+            _raise_http_exception_from_rpc_error(exc)
+
+        return _permission_check_result_from_proto(response)
 
 
 class AuthGrpcService(auth_service_pb2_grpc.AuthServiceServicer):
@@ -172,6 +240,49 @@ def _authentication_result_to_proto(result: AuthenticationResultStruct) -> Any:
     )
 
 
+def _login_request_to_proto(request: LoginRequest) -> Any:
+    proto = cast("Any", auth_service_pb2)
+    return proto.AuthenticateRequest(username=request.username, password=request.password)
+
+
+def _permission_check_request_to_proto(request: PermissionCheckRequestStruct) -> Any:
+    proto = cast("Any", auth_service_pb2)
+    return proto.PermissionCheckRequest(
+        user_id=str(request.user_id),
+        room_id=request.room_id,
+        action=_PERMISSION_ACTION_TO_PROTO[request.action],
+    )
+
+
+def _authentication_result_from_proto(response: Any) -> AuthenticationResultStruct:
+    return AuthenticationResultStruct(
+        user=_user_from_proto(response.user),
+        context=_permission_context_from_proto(response.context),
+    )
+
+
+def _permission_context_from_proto(context: Any) -> PermissionContextStruct:
+    certification = (
+        _account_certification_from_proto(context.certification) if context.HasField("certification") else None
+    )
+    return PermissionContextStruct(
+        user=_user_from_proto(context.user),
+        certification=certification,
+        organizations=[_organization_from_proto(organization) for organization in context.organizations],
+        memberships=[_organization_member_from_proto(membership) for membership in context.memberships],
+        rooms=[_room_from_proto(room) for room in context.rooms],
+        room_authorizations=[_room_authorization_from_proto(grant) for grant in context.room_authorizations],
+    )
+
+
+def _permission_check_result_from_proto(response: Any) -> PermissionCheckResultStruct:
+    return PermissionCheckResultStruct(
+        allowed=response.allowed,
+        reason=response.reason,
+        matched_scope=_room_authorization_scope_from_proto(response.matched_scope),
+    )
+
+
 def _permission_context_to_proto(context: PermissionContextStruct) -> Any:
     proto = cast("Any", auth_service_pb2)
     kwargs: dict[str, Any] = {
@@ -212,6 +323,16 @@ def _user_to_proto(user: UserStruct) -> Any:
     )
 
 
+def _user_from_proto(user: Any) -> UserStruct:
+    return UserStruct(
+        id=UUID(user.id),
+        username=user.username,
+        email=user.email or None,
+        is_active=user.is_active,
+        is_superuser=user.is_superuser,
+    )
+
+
 def _account_certification_to_proto(certification: AccountCertificationStruct | None) -> Any:
     proto = cast("Any", auth_service_pb2)
     if certification is None:
@@ -228,6 +349,18 @@ def _account_certification_to_proto(certification: AccountCertificationStruct | 
     )
 
 
+def _account_certification_from_proto(certification: Any) -> AccountCertificationStruct:
+    return AccountCertificationStruct(
+        id=_optional_uuid(certification.id),
+        user_id=UUID(certification.user_id),
+        status=_certification_status_from_proto(certification.status),
+        organization_id=_optional_uuid(certification.organization_id),
+        certified_at=_optional_datetime(certification.certified_at),
+        revoked_at=_optional_datetime(certification.revoked_at),
+        note=certification.note or None,
+    )
+
+
 def _organization_to_proto(organization: OrganizationStruct) -> Any:
     proto = cast("Any", auth_service_pb2)
     return proto.Organization(
@@ -235,6 +368,16 @@ def _organization_to_proto(organization: OrganizationStruct) -> Any:
         name=organization.name,
         owner_user_id=str(organization.owner_user_id),
         description=organization.description or "",
+        is_active=organization.is_active,
+    )
+
+
+def _organization_from_proto(organization: Any) -> OrganizationStruct:
+    return OrganizationStruct(
+        id=_optional_uuid(organization.id),
+        name=organization.name,
+        owner_user_id=UUID(organization.owner_user_id),
+        description=organization.description or None,
         is_active=organization.is_active,
     )
 
@@ -250,6 +393,16 @@ def _organization_member_to_proto(membership: OrganizationMemberStruct) -> Any:
     )
 
 
+def _organization_member_from_proto(membership: Any) -> OrganizationMemberStruct:
+    return OrganizationMemberStruct(
+        id=_optional_uuid(membership.id),
+        organization_id=UUID(membership.organization_id),
+        user_id=UUID(membership.user_id),
+        role=_organization_member_role_from_proto(membership.role),
+        is_active=membership.is_active,
+    )
+
+
 def _room_to_proto(room: RoomStruct) -> Any:
     proto = cast("Any", auth_service_pb2)
     return proto.Room(
@@ -258,6 +411,17 @@ def _room_to_proto(room: RoomStruct) -> Any:
         room_kind=_ROOM_OWNERSHIP_KIND_TO_PROTO[room.room_kind],
         owner_user_id=str(room.owner_user_id) if room.owner_user_id is not None else "",
         organization_id=str(room.organization_id) if room.organization_id is not None else "",
+        is_active=room.is_active,
+    )
+
+
+def _room_from_proto(room: Any) -> RoomStruct:
+    return RoomStruct(
+        id=_optional_uuid(room.id),
+        room_id=room.room_id,
+        room_kind=_room_ownership_kind_from_proto(room.room_kind),
+        owner_user_id=_optional_uuid(room.owner_user_id),
+        organization_id=_optional_uuid(room.organization_id),
         is_active=room.is_active,
     )
 
@@ -277,5 +441,57 @@ def _room_authorization_to_proto(grant: RoomAuthorizationStruct) -> Any:
     )
 
 
+def _room_authorization_from_proto(grant: Any) -> RoomAuthorizationStruct:
+    return RoomAuthorizationStruct(
+        id=_optional_uuid(grant.id),
+        room_id=grant.room_id,
+        organization_id=UUID(grant.organization_id),
+        user_id=UUID(grant.user_id),
+        access_scope=_room_authorization_scope_from_proto(grant.access_scope) or RoomAuthorizationScope.VIEW,
+        status=_room_authorization_status_from_proto(grant.status),
+        granted_by_user_id=_optional_uuid(grant.granted_by_user_id),
+        expires_at=_optional_datetime(grant.expires_at),
+        note=grant.note or None,
+    )
+
+
 def _permission_action_from_proto(value: int) -> PermissionAction:
     return _PROTO_TO_PERMISSION_ACTION.get(value, PermissionAction.VIEW)
+
+
+def _certification_status_from_proto(value: int) -> AccountCertificationStatus:
+    return _PROTO_TO_CERTIFICATION_STATUS.get(value, AccountCertificationStatus.UNCERTIFIED)
+
+
+def _organization_member_role_from_proto(value: int) -> OrganizationMemberRole:
+    return _PROTO_TO_ORGANIZATION_MEMBER_ROLE.get(value, OrganizationMemberRole.MEMBER)
+
+
+def _room_ownership_kind_from_proto(value: int) -> RoomOwnershipKind:
+    return _PROTO_TO_ROOM_OWNERSHIP_KIND.get(value, RoomOwnershipKind.PERSONAL)
+
+
+def _room_authorization_status_from_proto(value: int) -> RoomAuthorizationStatus:
+    return _PROTO_TO_ROOM_AUTHORIZATION_STATUS.get(value, RoomAuthorizationStatus.PENDING)
+
+
+def _room_authorization_scope_from_proto(value: int) -> RoomAuthorizationScope | None:
+    return _PROTO_TO_ROOM_AUTHORIZATION_SCOPE.get(value)
+
+
+def _optional_uuid(value: str) -> UUID | None:
+    return UUID(value) if value else None
+
+
+def _optional_datetime(value: str) -> datetime | None:
+    return datetime.fromisoformat(value) if value else None
+
+
+def _raise_http_exception_from_rpc_error(exc: "grpc.aio.AioRpcError") -> NoReturn:
+    if exc.code() is grpc.StatusCode.UNAUTHENTICATED:
+        raise NotAuthorizedException(detail=exc.details() or "Authentication failed.") from exc
+
+    if exc.code() is grpc.StatusCode.INVALID_ARGUMENT:
+        raise NotAuthorizedException(detail=exc.details() or "Invalid auth request.") from exc
+
+    raise ServiceUnavailableException(detail="Auth service unavailable.") from exc

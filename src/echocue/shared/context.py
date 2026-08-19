@@ -8,12 +8,12 @@ from typing import Any
 from uuid import UUID
 
 from litestar import Request
-from litestar.exceptions import ImproperlyConfiguredException
+from litestar.exceptions import HTTPException, ImproperlyConfiguredException
 from msgspec import field
 
+from echocue.auth.client import create_auth_permission_client
 from echocue.auth.schema import UserStruct
 from echocue.auth.security import SESSION_USER_ID_KEY
-from echocue.auth.service import UserService
 from echocue.base import BaseStruct
 
 __all__ = ("RequestContext",)
@@ -77,7 +77,11 @@ async def _get_session_user(session: dict[str, Any]) -> UserStruct | None:
     except ValueError:
         return None
 
-    async with UserService.provide() as service:
-        user = await service.get_by_id(user_id)
+    try:
+        context = await create_auth_permission_client().get_permission_context(user_id)
+    except HTTPException:
+        return None
+
+    user = context.user
 
     return user if user and user.is_active else None
