@@ -35,6 +35,12 @@ app:
 logging:
   file:
     enabled: false
+auth:
+  grpc_enabled: false
+  grpc_target: "127.0.0.1:50052"
+  grpc_timeout: 1.0
+  grpc_host: "127.0.0.1"
+  grpc_port: 50052
 alchemy:
   url: "sqlite+aiosqlite:///local.sqlite3"
 """.strip(),
@@ -42,6 +48,11 @@ alchemy:
         monkeypatch.setenv("ECHOCUE_APP_PORT", "8001")
         monkeypatch.setenv("ECHOCUE_ALCHEMY_URL", "postgresql+asyncpg://user:pass@localhost:5432/echocue")
         monkeypatch.setenv("ECHOCUE_LOGGING_FILE_ENABLED", "true")
+        monkeypatch.setenv("ECHOCUE_AUTH_GRPC_ENABLED", "true")
+        monkeypatch.setenv("ECHOCUE_AUTH_GRPC_TARGET", "auth:50052")
+        monkeypatch.setenv("ECHOCUE_AUTH_GRPC_TIMEOUT", "2.5")
+        monkeypatch.setenv("ECHOCUE_AUTH_GRPC_HOST", "0.0.0.0")
+        monkeypatch.setenv("ECHOCUE_AUTH_GRPC_PORT", "50053")
         monkeypatch.setenv("ECHOCUE_LEXICON_GRPC_ENABLED", "true")
         monkeypatch.setenv("ECHOCUE_LEXICON_GRPC_TARGET", "lexicon:50051")
         monkeypatch.setenv("ECHOCUE_LEXICON_GRPC_TIMEOUT", "2.5")
@@ -52,6 +63,11 @@ alchemy:
         assert config.app.port == 8001
         assert config.alchemy.url == "postgresql+asyncpg://user:pass@localhost:5432/echocue"
         assert config.logging.file.enabled is True
+        assert config.auth.grpc_enabled is True
+        assert config.auth.grpc_target == "auth:50052"
+        assert config.auth.grpc_timeout == 2.5
+        assert config.auth.grpc_host == "0.0.0.0"
+        assert config.auth.grpc_port == 50053
         assert config.lexicon.grpc_enabled is True
         assert config.lexicon.grpc_target == "lexicon:50051"
         assert config.lexicon.grpc_timeout == 2.5

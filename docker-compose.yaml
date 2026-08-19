@@ -57,6 +57,18 @@ services:
       - ./config/app.config.yaml:/app/config.yaml:ro
       - ./assets:/app/assets:ro
 
+  auth:
+    image: echocue:0.1.0
+    command: ["uv", "run", "app", "auth", "serve"]
+    expose:
+      - "50052"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./config/app.config.yaml:/app/config.yaml:ro
+      - ./logs:/app/logs
+
   app:
     image: echocue:0.1.0
     build:
@@ -73,6 +85,8 @@ services:
       live:
         condition: service_started
       lexicon:
+        condition: service_started
+      auth:
         condition: service_started
     volumes:
       - ./config/app.config.yaml:/app/config.yaml:ro

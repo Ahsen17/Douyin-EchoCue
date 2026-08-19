@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 from echocue.core.lexicon import SemanticType
 from echocue.core.workflow import (
     WorkflowPushAction,
-    WorkflowRuns,
     WorkflowRunService,
+    WorkflowRunsModel,
     WorkflowRunStruct,
     WorkflowStageEnvelopeStruct,
     WorkflowStageName,
@@ -13,12 +13,12 @@ from echocue.core.workflow import (
 )
 
 
-class TestWorkflowRunsModel:
-    def test_workflow_runs_table_name_matches_plan(self) -> None:
-        assert WorkflowRuns.__tablename__ == "workflow_runs"
+class TestWorkflowRuns:
+    def test_workflow_runs_model_table_name_matches_plan(self) -> None:
+        assert WorkflowRunsModel.__tablename__ == "workflow_runs_model"
 
-    def test_workflow_run_service_uses_workflow_runs_repository(self) -> None:
-        assert WorkflowRunService.repository_type.model_type is WorkflowRuns
+    def test_workflow_run_service_uses_workflow_runs_model_repository(self) -> None:
+        assert WorkflowRunService.repository_type.model_type is WorkflowRunsModel
 
     def test_model_roundtrip_uses_domain_structs(self) -> None:
         started_at = datetime(2026, 8, 18, 12, 0, tzinfo=UTC)
@@ -36,10 +36,10 @@ class TestWorkflowRunsModel:
             ),
         )
 
-        model = WorkflowRuns.from_struct(workflow_run)
+        model = WorkflowRunsModel.from_struct(workflow_run)
         clone = model.to_struct()
 
-        assert model.__tablename__ == "workflow_runs"
+        assert model.__tablename__ == "workflow_runs_model"
         assert model.room_id == "room-a"
         assert model.workflow_status == "running"
         assert model.trigger_type == "scheduled_comment_window"
