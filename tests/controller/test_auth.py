@@ -4,7 +4,8 @@ from uuid import uuid4
 
 import pytest
 from litestar import Litestar
-from litestar.status_codes import HTTP_200_OK, HTTP_409_CONFLICT
+from litestar.exceptions import NotAuthorizedException, ServiceUnavailableException
+from litestar.status_codes import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_409_CONFLICT, HTTP_503_SERVICE_UNAVAILABLE
 from litestar.testing import AsyncTestClient
 from pytest import MonkeyPatch
 
@@ -98,3 +99,51 @@ class TestAuthController:
 
         assert first_response.status_code == HTTP_200_OK
         assert second_response.status_code == HTTP_409_CONFLICT
+
+    async def test_auth_session_rejects_invalid_credentials(self, monkeypatch: MonkeyPatch) -> None:
+        auth_client = SimpleNamespace(
+            authenticate=AsyncMock(side_effect=NotAuthorizedException(detail="Invalid username or password.")),
+            get_permission_context=AsyncMock(),
+            check_permission=AsyncMock(),
+        )
+        monkeypatch.setattr("echocue.controller.auth.create_auth_permission_client", lambda: auth_client)
+
+        async with AsyncTestClient(app=self.app) as client:
+            response = await client.post(
+                "/auth/session",
+                json={"username": "grpc-user", "password": "wrong-password"},
+            )
+
+        assert response.status_code == HTTP_401_UNAUTHORIZED
+
+    async def test_auth_session_returns_service_unavailable_when_auth_is_down(
+        self,
+        monkeypatch: MonkeyPatch,
+    ) -> None:
+        auth_client = SimpleNamespace(
+            authenticate=AsyncMock(side_effect=ServiceUnavailableException(detail="Auth service unavailable.")),
+            get_permission_context=AsyncMock(),
+            check_permission=AsyncMock(),
+        )
+        monkeypatch.setattr("echocue.controller.auth.create_auth_permission_client", lambda: auth_client)
+
+        async with AsyncTestClient(app=self.app) as client:
+            response = await client.post(
+                "/auth/session",
+                json={"username": "grpc-user", "password": "password"},
+            )
+
+        assert response.status_code == HTTP_503_SERVICE_UNAVAILABLE
+
+    async def test_auth_session_clear_only_affects_current_session(self) -> None:
+        async with AsyncTestClient(app=self.app) as client:
+            login_response = await client.post(
+                "/auth/session",
+                json={"username": "grpc-user", "password": "password"},
+            )
+            logout_response = await client.delete("/auth/session")
+            me_response = await client.get("/auth/me")
+
+        assert login_response.status_code == HTTP_200_OK
+        assert logout_response.status_code == HTTP_200_OK
+        assert me_response.status_code == HTTP_401_UNAUTHORIZED
