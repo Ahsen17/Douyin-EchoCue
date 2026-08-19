@@ -1,0 +1,27 @@
+{
+  "name": "echocue-webui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web management UI for Douyin-EchoCue.",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "clean": "node ./scripts/clean.mjs",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "build": "npm run clean && vue-tsc --noEmit -p tsconfig.json && vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@fontsource/noto-sans-sc": "^5.2.5",
+    "vue": "^3.5.18"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vue-tsc": "^3.0.5"
+  }
+}
