@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const promises_1 = require("node:fs/promises");
+const node_os_1 = require("node:os");
 const node_path_1 = require("node:path");
 const isDevelopment = !electron_1.app.isPackaged;
 const rendererUrl = process.env.ECHOCUE_RENDERER_URL ?? "http://127.0.0.1:5173";
@@ -14,6 +15,18 @@ const overlaySizePresets = {
     medium: { width: 820, height: 390 },
     large: { width: 980, height: 480 },
 };
+function isWslRuntime() {
+    return process.platform === "linux"
+        && (Boolean(process.env.WSL_DISTRO_NAME) || (0, node_os_1.release)().toLowerCase().includes("microsoft"));
+}
+function configureGpuCompatibility() {
+    if (!isWslRuntime() || process.env.ECHOCUE_ENABLE_GPU === "1") {
+        return;
+    }
+    electron_1.app.disableHardwareAcceleration();
+    electron_1.app.commandLine.appendSwitch("disable-gpu");
+}
+configureGpuCompatibility();
 let mainWindow = null;
 let overlayWindow = null;
 let overlayPayload = null;

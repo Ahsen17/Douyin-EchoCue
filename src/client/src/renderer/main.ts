@@ -134,7 +134,7 @@ function renderWorkspace(): string {
               <small>${escapeHtml(account?.accountType ?? "")}</small>
             </span>
           </div>
-          <button class="icon-button" data-action="sign-out" title="退出当前账号" aria-label="退出当前账号">↪</button>
+          <button class="icon-button" data-action="sign-out" data-tooltip="退出当前账号" aria-label="退出当前账号">↪</button>
           <div class="window-controls" aria-label="窗口控制">
             <button class="window-control window-control-close" data-action="window-close" data-tooltip="关闭" aria-label="关闭">
               <span aria-hidden="true"></span>
