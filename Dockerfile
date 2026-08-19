@@ -12,7 +12,7 @@ COPY src ./src
 
 RUN uv sync --frozen --no-dev
 
-EXPOSE 8000 50051
+EXPOSE 8000 50051 50052
 
 # 默认启动 app 服务。lexicon 微服务也复用同一镜像，可通过项目 CLI 启动。
 # Start the app service by default. The lexicon service can reuse the same image and be started via the project CLI.
@@ -22,4 +22,7 @@ EXPOSE 8000 50051
 # Lexicon example:
 #   docker run --rm -p 50051:50051 -v "$PWD/config/app.config.yaml:/app/config.yaml:ro" \
 #     -v "$PWD/assets:/app/assets:ro" echocue:0.1.0 uv run app lexicon serve
+# Auth example:
+#   docker run --rm -p 50052:50052 -v "$PWD/config/app.config.yaml:/app/config.yaml:ro" \
+#     -v "$PWD/logs:/app/logs" echocue:0.1.0 uv run app auth serve
 CMD ["uv", "run", "app", "run", "--host", "0.0.0.0", "--port", "8000"]

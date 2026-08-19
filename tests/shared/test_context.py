@@ -1,11 +1,22 @@
-from collections.abc import Awaitable, Callable
 from typing import Any, cast
 from uuid import uuid4
 
-from echocue.auth.model import UserModel
+import pytest
+
+from echocue.auth import PermissionContextStruct, UserStruct
 from echocue.auth.security import SESSION_USER_ID_KEY
-from echocue.base import Config
 from echocue.shared.context import provide_request_context
+
+
+class FakeAuthPermissionClient:
+    def __init__(self, user: UserStruct | None) -> None:
+        self._user = user
+
+    async def get_permission_context(self, user_id: object) -> PermissionContextStruct:
+        if self._user is None or user_id != self._user.id:
+            raise AssertionError("Unexpected user id.")
+
+        return PermissionContextStruct(user=self._user)
 
 
 class RequestStub:
@@ -24,11 +35,11 @@ class RequestStub:
 class TestRequestContext:
     async def test_resolves_user_from_session(
         self,
-        test_config: Config,
-        create_test_user: Callable[..., Awaitable[UserModel]],
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        assert test_config.alchemy.url.startswith("sqlite+aiosqlite")
-        user = await create_test_user(username="admin", password="admin")
+        user = UserStruct(id=uuid4(), username="admin")
+        fake_client = FakeAuthPermissionClient(user)
+        monkeypatch.setattr("echocue.shared.context.create_auth_permission_client", lambda: fake_client)
 
         context = await provide_request_context(
             cast(Any, RequestStub({SESSION_USER_ID_KEY: str(user.id)})),
@@ -39,11 +50,9 @@ class TestRequestContext:
         assert context.user is not None
         assert context.user.username == "admin"
 
-    async def test_ignores_invalid_session_user_id(self, test_config: Config) -> None:
-        assert test_config.alchemy.url.startswith("sqlite+aiosqlite")
-
+    async def test_ignores_invalid_session_user_id(self) -> None:
         context = await provide_request_context(
-            cast(Any, RequestStub({SESSION_USER_ID_KEY: str(uuid4())})),
+            cast(Any, RequestStub({SESSION_USER_ID_KEY: "not-a-uuid"})),
         )
 
         assert context.is_authenticated is False

@@ -133,5 +133,10 @@ _ENV_OVERRIDES: tuple[tuple[str, tuple[str, ...], type[Any]], ...] = (
     ("ECHOCUE_LOGGING_FORMAT", ("logging", "format"), str),
     ("ECHOCUE_LOGGING_FILE_ENABLED", ("logging", "file", "enabled"), bool),
     ("ECHOCUE_LOGGING_FILE_PATH", ("logging", "file", "path"), str),
+    ("ECHOCUE_AUTH_GRPC_ENABLED", ("auth", "grpc_enabled"), bool),
+    ("ECHOCUE_AUTH_GRPC_TARGET", ("auth", "grpc_target"), str),
+    ("ECHOCUE_AUTH_GRPC_TIMEOUT", ("auth", "grpc_timeout"), float),
+    ("ECHOCUE_AUTH_GRPC_HOST", ("auth", "grpc_host"), str),
+    ("ECHOCUE_AUTH_GRPC_PORT", ("auth", "grpc_port"), int),
     ("ECHOCUE_AUTH_SESSION_COOKIE_SECURE", ("auth", "session_cookie_secure"), bool),
 )

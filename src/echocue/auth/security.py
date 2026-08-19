@@ -8,13 +8,14 @@ from typing import Any
 from uuid import UUID
 
 from litestar.connection import ASGIConnection
+from litestar.exceptions import NotAuthorizedException, ServiceUnavailableException
 from litestar.middleware.session.server_side import ServerSideSessionBackend, ServerSideSessionConfig
 from litestar.security.session_auth import SessionAuth
 
+from echocue.auth.client import create_auth_permission_client
 from echocue.base import AuthConfig, Config
 
 from .schema import UserStruct
-from .service import UserService
 
 SESSION_USER_ID_KEY = "user_id"
 SESSION_EXCLUDE_PATHS = (
@@ -36,8 +37,12 @@ async def retrieve_user_handler(session: dict[str, Any], _: ASGIConnection) -> U
     except ValueError:
         return None
 
-    async with UserService.provide() as service:
-        user = await service.get_by_id(user_id)
+    try:
+        permission_context = await create_auth_permission_client().get_permission_context(user_id)
+    except (NotAuthorizedException, ServiceUnavailableException):
+        return None
+
+    user = permission_context.user
 
     return user if user and user.is_active else None
 

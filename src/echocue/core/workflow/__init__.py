@@ -33,7 +33,7 @@ from .handler import (
     WorkflowSafetyRuleScanner,
     WorkflowSemanticClassificationHandler,
 )
-from .model import WorkflowRuns
+from .model import WorkflowRunsModel
 from .schema import (
     InterestAgentExecutionConfigStruct,
     InterestAgentInputStruct,
@@ -96,7 +96,7 @@ __all__ = (
     "WorkflowRunService",
     "WorkflowRunStruct",
     "WorkflowRunVO",
-    "WorkflowRuns",
+    "WorkflowRunsModel",
     "WorkflowSafetyRuleScanner",
     "WorkflowSemanticClassificationHandler",
     "WorkflowSemanticClassificationRoomMismatchError",

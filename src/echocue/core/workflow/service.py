@@ -6,19 +6,19 @@ from advanced_alchemy.repository import SQLAlchemyAsyncRepository
 
 from echocue.shared import CustomService
 
-from .model import WorkflowRuns
+from .model import WorkflowRunsModel
 from .schema import WorkflowRunStruct
 
 __all__ = ("WorkflowRunService",)
 
 
-class WorkflowRunService(CustomService[WorkflowRuns]):
+class WorkflowRunService(CustomService[WorkflowRunsModel]):
     """Workflow run database service."""
 
-    class _Repository(SQLAlchemyAsyncRepository[WorkflowRuns]):
+    class _Repository(SQLAlchemyAsyncRepository[WorkflowRunsModel]):
         """Workflow run model repository."""
 
-        model_type: type[WorkflowRuns] = WorkflowRuns
+        model_type: type[WorkflowRunsModel] = WorkflowRunsModel
 
     repository_type = _Repository
 
