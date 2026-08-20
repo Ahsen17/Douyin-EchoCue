@@ -9,6 +9,7 @@ from .embedder import (
     SparseVector,
 )
 from .encoder import Jinja2Encoder
+from .enum import CamelizedStrEnum
 from .exception import ApplicationError
 from .logging import LoggingSetup
 from .response import GenericResponse, Pagination
@@ -17,6 +18,7 @@ __all__ = (
     "AlchemySetup",
     "ApplicationError",
     "Bm25SparseEmbedder",
+    "CamelizedStrEnum",
     "ChatAgentLoader",
     "CustomModel",
     "CustomService",
