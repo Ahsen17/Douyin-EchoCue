@@ -9,7 +9,18 @@ __all__ = (
     "RoomAuthorizationScope",
     "RoomAuthorizationStatus",
     "RoomOwnershipKind",
+    "SessionClientType",
 )
+
+
+class SessionClientType(StrEnum):
+    """Application surface represented by an HTTP session."""
+
+    CLIENT = auto()
+    """A Windows desktop client session."""
+
+    WEBUI = auto()
+    """A browser-based management session."""
 
 
 class AccountCertificationStatus(StrEnum):

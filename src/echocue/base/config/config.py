@@ -138,5 +138,7 @@ _ENV_OVERRIDES: tuple[tuple[str, tuple[str, ...], type[Any]], ...] = (
     ("ECHOCUE_AUTH_GRPC_TIMEOUT", ("auth", "grpc_timeout"), float),
     ("ECHOCUE_AUTH_GRPC_HOST", ("auth", "grpc_host"), str),
     ("ECHOCUE_AUTH_GRPC_PORT", ("auth", "grpc_port"), int),
+    ("ECHOCUE_AUTH_SESSION_MAX_AGE_SECONDS", ("auth", "session_max_age_seconds"), int),
+    ("ECHOCUE_AUTH_SESSION_RENEW_ON_ACCESS", ("auth", "session_renew_on_access"), bool),
     ("ECHOCUE_AUTH_SESSION_COOKIE_SECURE", ("auth", "session_cookie_secure"), bool),
 )

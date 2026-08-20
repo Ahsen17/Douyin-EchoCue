@@ -6,6 +6,7 @@ from .enum import (
     RoomAuthorizationScope,
     RoomAuthorizationStatus,
     RoomOwnershipKind,
+    SessionClientType,
 )
 from .exception import UserDisabledError
 from .handler import AuthPermissionHandler
@@ -49,6 +50,7 @@ from .service import (
     RoomService,
     UserService,
 )
+from .session import SessionIdentityStruct
 
 __all__ = (
     "AccountCertificationModel",
@@ -89,6 +91,8 @@ __all__ = (
     "RoomService",
     "RoomStruct",
     "RoomVO",
+    "SessionClientType",
+    "SessionIdentityStruct",
     "UserDisabledError",
     "UserModel",
     "UserService",

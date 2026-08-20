@@ -53,6 +53,8 @@ alchemy:
         monkeypatch.setenv("ECHOCUE_AUTH_GRPC_TIMEOUT", "2.5")
         monkeypatch.setenv("ECHOCUE_AUTH_GRPC_HOST", "0.0.0.0")
         monkeypatch.setenv("ECHOCUE_AUTH_GRPC_PORT", "50053")
+        monkeypatch.setenv("ECHOCUE_AUTH_SESSION_MAX_AGE_SECONDS", "14400")
+        monkeypatch.setenv("ECHOCUE_AUTH_SESSION_RENEW_ON_ACCESS", "false")
         monkeypatch.setenv("ECHOCUE_LEXICON_GRPC_ENABLED", "true")
         monkeypatch.setenv("ECHOCUE_LEXICON_GRPC_TARGET", "lexicon:50051")
         monkeypatch.setenv("ECHOCUE_LEXICON_GRPC_TIMEOUT", "2.5")
@@ -68,6 +70,8 @@ alchemy:
         assert config.auth.grpc_timeout == 2.5
         assert config.auth.grpc_host == "0.0.0.0"
         assert config.auth.grpc_port == 50053
+        assert config.auth.session_max_age_seconds == 14_400
+        assert config.auth.session_renew_on_access is False
         assert config.lexicon.grpc_enabled is True
         assert config.lexicon.grpc_target == "lexicon:50051"
         assert config.lexicon.grpc_timeout == 2.5

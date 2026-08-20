@@ -5,7 +5,6 @@ Authentication only identifies users; authorization rules should be added throug
 """
 
 from typing import Any
-from uuid import UUID
 
 from litestar.connection import ASGIConnection
 from litestar.exceptions import NotAuthorizedException, ServiceUnavailableException
@@ -16,8 +15,8 @@ from echocue.auth.client import create_auth_permission_client
 from echocue.base import AuthConfig, Config
 
 from .schema import UserStruct
+from .session import parse_session_identity
 
-SESSION_USER_ID_KEY = "user_id"
 SESSION_EXCLUDE_PATHS = (
     r"^/system(?:/.*)?$",
     "/docs",
@@ -28,17 +27,12 @@ SESSION_EXCLUDE_PATHS = (
 async def retrieve_user_handler(session: dict[str, Any], _: ASGIConnection) -> UserStruct | None:
     """Retrieve the authenticated user from session data."""
 
-    raw_user_id = session.get(SESSION_USER_ID_KEY)
-    if not isinstance(raw_user_id, str):
+    identity = parse_session_identity(session)
+    if identity is None:
         return None
 
     try:
-        user_id = UUID(raw_user_id)
-    except ValueError:
-        return None
-
-    try:
-        permission_context = await create_auth_permission_client().get_permission_context(user_id)
+        permission_context = await create_auth_permission_client().get_permission_context(identity.user_id)
     except (NotAuthorizedException, ServiceUnavailableException):
         return None
 

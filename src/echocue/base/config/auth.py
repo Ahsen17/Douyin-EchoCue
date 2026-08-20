@@ -16,7 +16,7 @@ class AuthConfig(BaseStruct):
     grpc_port: int = 50052
 
     session_cookie_key: str = "session"
-    session_max_age_seconds: int = 3600
+    session_max_age_seconds: int = 8 * 60 * 60
     session_renew_on_access: bool = True
     session_store_name: str = "sessions"
     session_store_namespace: str = "ECHOCUE_SESSIONS"

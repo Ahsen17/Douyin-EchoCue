@@ -59,6 +59,7 @@ class TestAuthController:
             )
 
             assert login_response.status_code == HTTP_200_OK
+            assert login_response.json()["data"]["expiresIn"] == 28_800
             assert login_response.json()["data"]["user"]["username"] == "grpc-user"
 
             me_response = await client.get("/auth/me")

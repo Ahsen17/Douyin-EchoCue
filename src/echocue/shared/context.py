@@ -8,12 +8,13 @@ from typing import Any
 from uuid import UUID
 
 from litestar import Request
-from litestar.exceptions import HTTPException, ImproperlyConfiguredException
+from litestar.exceptions import HTTPException, ImproperlyConfiguredException, NotAuthorizedException
 from msgspec import field
 
 from echocue.auth.client import create_auth_permission_client
+from echocue.auth.enum import SessionClientType
 from echocue.auth.schema import UserStruct
-from echocue.auth.security import SESSION_USER_ID_KEY
+from echocue.auth.session import SessionIdentityStruct, parse_session_identity
 from echocue.base import BaseStruct
 
 __all__ = ("RequestContext",)
@@ -24,8 +25,24 @@ class RequestContext(BaseStruct):
 
     user: UserStruct | None = None
     user_id: UUID | None = None
+    client_type: SessionClientType | None = None
+    client_id: UUID | None = None
     session: dict[str, Any] = field(default_factory=dict)
     is_authenticated: bool = False
+
+    def require_client_id(self) -> UUID:
+        """Return the client id or reject a non-client request context."""
+
+        if not self.is_authenticated or self.client_type is not SessionClientType.CLIENT or self.client_id is None:
+            raise NotAuthorizedException(detail="A client session is required.")
+
+        return self.client_id
+
+    def require_webui_session(self) -> None:
+        """Reject a request context that does not represent a webui session."""
+
+        if not self.is_authenticated or self.client_type is not SessionClientType.WEBUI or self.client_id is not None:
+            raise NotAuthorizedException(detail="A webui session is required.")
 
 
 async def provide_request_context(request: Request[Any, Any, Any]) -> RequestContext:
@@ -33,13 +50,18 @@ async def provide_request_context(request: Request[Any, Any, Any]) -> RequestCon
 
     user = _get_request_user(request)
     session = _get_request_session(request)
+    identity = parse_session_identity(session)
 
-    if user is None:
-        user = await _get_session_user(session)
+    if identity is None:
+        user = None
+    elif user is None:
+        user = await _get_session_user(identity)
 
     return RequestContext(
         user=user,
         user_id=user.id if user else None,
+        client_type=identity.client_type if user and identity else None,
+        client_id=identity.client_id if user and identity else None,
         session=session,
         is_authenticated=user is not None,
     )
@@ -65,20 +87,11 @@ def _get_request_session(request: Request[Any, Any, Any]) -> dict[str, Any]:
         return {}
 
 
-async def _get_session_user(session: dict[str, Any]) -> UserStruct | None:
+async def _get_session_user(identity: SessionIdentityStruct) -> UserStruct | None:
     """Resolve a user from session data."""
 
-    raw_user_id = session.get(SESSION_USER_ID_KEY)
-    if not isinstance(raw_user_id, str):
-        return None
-
     try:
-        user_id = UUID(raw_user_id)
-    except ValueError:
-        return None
-
-    try:
-        context = await create_auth_permission_client().get_permission_context(user_id)
+        context = await create_auth_permission_client().get_permission_context(identity.user_id)
     except HTTPException:
         return None
 

@@ -5,7 +5,6 @@ Controllers handle HTTP input, response construction, and service calls without 
 """
 
 from typing import Any
-from uuid import UUID
 
 from litestar import Controller, Request, delete, get, post
 from litestar.exceptions import HTTPException, ImproperlyConfiguredException, NotAuthorizedException
@@ -22,7 +21,8 @@ from echocue.auth import (
     UserVO,
 )
 from echocue.auth.client import create_auth_permission_client
-from echocue.auth.security import SESSION_USER_ID_KEY
+from echocue.auth.enum import SessionClientType
+from echocue.auth.session import create_session_data, parse_session_identity
 from echocue.base import Config
 from echocue.shared import GenericResponse
 from echocue.shared.context import RequestContext
@@ -54,7 +54,7 @@ class AuthController(Controller):
         auth_client = create_auth_permission_client()
         result = await auth_client.authenticate(data)
         config = Config.get().auth
-        request.set_session({SESSION_USER_ID_KEY: str(result.user.id)})
+        request.set_session(create_session_data(result.user.id, SessionClientType.WEBUI))
 
         return GenericResponse(
             message="ok",
@@ -131,18 +131,17 @@ class AuthController(Controller):
 
 
 async def _reject_existing_session(request: Request[UserStruct, Any, Any]) -> None:
-    raw_user_id = _get_session_user_id(request)
-    if raw_user_id is None:
+    session = _get_session(request)
+    if not session:
         return
 
-    try:
-        user_id = UUID(raw_user_id)
-    except ValueError:
+    identity = parse_session_identity(session)
+    if identity is None:
         request.clear_session()
         return
 
     try:
-        permission_context = await create_auth_permission_client().get_permission_context(user_id)
+        permission_context = await create_auth_permission_client().get_permission_context(identity.user_id)
     except NotAuthorizedException:
         request.clear_session()
         return
@@ -156,10 +155,8 @@ async def _reject_existing_session(request: Request[UserStruct, Any, Any]) -> No
     request.clear_session()
 
 
-def _get_session_user_id(request: Request[UserStruct, Any, Any]) -> str | None:
+def _get_session(request: Request[UserStruct, Any, Any]) -> dict[str, Any]:
     try:
-        raw_user_id = request.session.get(SESSION_USER_ID_KEY)
+        return dict(request.session)
     except ImproperlyConfiguredException:
-        return None
-
-    return raw_user_id if isinstance(raw_user_id, str) else None
+        return {}
