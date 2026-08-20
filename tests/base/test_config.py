@@ -7,6 +7,9 @@ from echocue.base import Config
 
 
 class TestConfig:
+    def test_room_status_cache_defaults_to_two_hours(self) -> None:
+        assert Config().live.room_status_cache_ttl_seconds == 7_200
+
     def test_loads_default_yaml_config(self, tmp_path: Path) -> None:
         config_path = tmp_path / "config.yaml"
         config_path.write_text(
@@ -58,6 +61,7 @@ alchemy:
         monkeypatch.setenv("ECHOCUE_LEXICON_GRPC_ENABLED", "true")
         monkeypatch.setenv("ECHOCUE_LEXICON_GRPC_TARGET", "lexicon:50051")
         monkeypatch.setenv("ECHOCUE_LEXICON_GRPC_TIMEOUT", "2.5")
+        monkeypatch.setenv("ECHOCUE_LIVE_ROOM_STATUS_CACHE_TTL_SECONDS", "3600")
 
         config = Config.get(str(config_path))
 
@@ -75,6 +79,7 @@ alchemy:
         assert config.lexicon.grpc_enabled is True
         assert config.lexicon.grpc_target == "lexicon:50051"
         assert config.lexicon.grpc_timeout == 2.5
+        assert config.live.room_status_cache_ttl_seconds == 3_600
 
     def test_rejects_invalid_boolean_environment_override(self, monkeypatch: MonkeyPatch) -> None:
         monkeypatch.setenv("ECHOCUE_LOGGING_FILE_ENABLED", "maybe")

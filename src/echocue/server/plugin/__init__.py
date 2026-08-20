@@ -5,6 +5,7 @@ from .auth import AuthPlugin
 from .context import ContextPlugin
 from .docs import ScalarRenderPlugin
 from .lexicon import LexiconPlugin
+from .live import LivePlugin
 from .qdrant import QdrantPlugin
 
 __all__ = (
@@ -12,6 +13,7 @@ __all__ = (
     "AuthPlugin",
     "ContextPlugin",
     "LexiconPlugin",
+    "LivePlugin",
     "QdrantPlugin",
     "ScalarRenderPlugin",
 )
@@ -22,5 +24,6 @@ plugins: tuple[PluginProtocol, ...] = (
     AuthPlugin(),
     ContextPlugin(),
     LexiconPlugin(),
+    LivePlugin(),
     QdrantPlugin(),
 )

@@ -36,5 +36,8 @@ lexicon:
   grpc_port: 50051
   collection_name: "live_lexicon"
 
+live:
+  room_status_cache_ttl_seconds: 7200
+
 alchemy:
   url: "postgresql+asyncpg://echocue:echocue@postgres:5432/echocue"

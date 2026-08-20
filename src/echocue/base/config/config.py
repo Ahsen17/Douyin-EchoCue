@@ -11,6 +11,7 @@ from .auth import AuthConfig
 from .constants import BASE_DIR
 from .embedding import EmbeddingConfig
 from .lexicon import LexiconConfig
+from .live import LiveConfig
 from .llm import LLMConfig
 from .logging import LoggingConfig
 from .qdrant import QdrantConfig
@@ -33,6 +34,7 @@ class Config(BaseStruct):
     alchemy: AlchemyConfig = field(default_factory=AlchemyConfig)
 
     lexicon: LexiconConfig = field(default_factory=LexiconConfig)
+    live: LiveConfig = field(default_factory=LiveConfig)
 
     llm: LLMConfig = field(default_factory=LLMConfig)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
@@ -129,6 +131,7 @@ _ENV_OVERRIDES: tuple[tuple[str, tuple[str, ...], type[Any]], ...] = (
     ("ECHOCUE_LEXICON_GRPC_HOST", ("lexicon", "grpc_host"), str),
     ("ECHOCUE_LEXICON_GRPC_PORT", ("lexicon", "grpc_port"), int),
     ("ECHOCUE_LEXICON_COLLECTION_NAME", ("lexicon", "collection_name"), str),
+    ("ECHOCUE_LIVE_ROOM_STATUS_CACHE_TTL_SECONDS", ("live", "room_status_cache_ttl_seconds"), int),
     ("ECHOCUE_LOGGING_LEVEL", ("logging", "level"), str),
     ("ECHOCUE_LOGGING_FORMAT", ("logging", "format"), str),
     ("ECHOCUE_LOGGING_FILE_ENABLED", ("logging", "file", "enabled"), bool),
