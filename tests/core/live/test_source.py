@@ -1,7 +1,56 @@
+import asyncio
 import json
 from datetime import UTC, datetime
 
-from echocue.core.live import CommentWindowHandler, DouyinLiveCommentSource, LiveRoomStatus, LiveStatusCode
+import pytest
+
+from echocue.core.live import (
+    CommentWindowHandler,
+    DouyinLiveCommentSource,
+    DouyinLiveDisconnectedError,
+    DouyinLiveFirstStatusError,
+    DouyinLiveFirstStatusTimeoutError,
+    DouyinLiveGateway,
+    DouyinLiveProtocolError,
+    LiveRoomStatus,
+    LiveStatusCode,
+)
+
+
+class FakeSocket:
+    def __init__(self, messages: list[str | bytes | Exception]) -> None:
+        self._messages = iter(messages)
+        self.close_count = 0
+
+    async def recv(self) -> str | bytes:
+        message = next(self._messages)
+        if isinstance(message, Exception):
+            raise message
+        return message
+
+    async def close(self) -> None:
+        self.close_count += 1
+
+
+class HangingSocket(FakeSocket):
+    async def recv(self) -> str | bytes:
+        await asyncio.sleep(10)
+        return "{}"
+
+
+def _status(code: str) -> str:
+    return json.dumps({"event": "live_status", "payload": {"code": code}})
+
+
+def _comment() -> str:
+    return json.dumps(
+        {
+            "method": "WebcastChatMessage",
+            "common": {"msgId": "comment-1"},
+            "user": {"id": "user-1", "nickname": "用户一"},
+            "content": "你好",
+        }
+    )
 
 
 class TestDouyinLiveCommentSource:
@@ -117,3 +166,75 @@ class TestDouyinLiveCommentSource:
         assert window.total_count == 0
         assert window.unique_user_count == 0
         assert window.text_batch == []
+
+
+class TestDouyinLiveGateway:
+    async def test_waits_for_online_and_keeps_connection_for_following_events(self) -> None:
+        socket = FakeSocket([_status("ROOM_ONLINE"), _comment(), _status("ROOM_ENDED")])
+
+        async def connector(url: str, timeout: float) -> FakeSocket:
+            assert url.endswith("/ws/room-a")
+            assert timeout == 1
+            return socket
+
+        connection = await DouyinLiveGateway(
+            connector=connector,
+            connect_timeout=1,
+            first_status_timeout=1,
+        ).connect("room-a")
+        events = []
+        async for event in connection.events():
+            events.append(event)
+            if len(events) == 3:
+                break
+
+        assert [event.event_type for event in events] == ["live_status", "comment", "live_status"]
+        assert socket.close_count == 0
+        await connection.close()
+        await connection.close()
+        assert socket.close_count == 1
+
+    async def test_rejects_first_non_online_status_and_closes_socket(self) -> None:
+        socket = FakeSocket([_status("ROOM_OFFLINE")])
+
+        async def connector(url: str, timeout: float) -> FakeSocket:
+            return socket
+
+        with pytest.raises(DouyinLiveFirstStatusError):
+            await DouyinLiveGateway(connector=connector).connect("room-a")
+
+        assert socket.close_count == 1
+
+    async def test_first_status_timeout_closes_socket(self) -> None:
+        socket = HangingSocket([])
+
+        async def connector(url: str, timeout: float) -> FakeSocket:
+            return socket
+
+        with pytest.raises(DouyinLiveFirstStatusTimeoutError):
+            await DouyinLiveGateway(connector=connector, first_status_timeout=0).connect("room-a")
+
+        assert socket.close_count == 1
+
+    async def test_invalid_payload_is_protocol_error(self) -> None:
+        socket = FakeSocket(["{"])
+
+        async def connector(url: str, timeout: float) -> FakeSocket:
+            return socket
+
+        with pytest.raises(DouyinLiveProtocolError):
+            await DouyinLiveGateway(connector=connector).connect("room-a")
+
+        assert socket.close_count == 1
+
+    async def test_remote_disconnect_is_classified_and_closes_socket(self) -> None:
+        socket = FakeSocket([_status("ROOM_ONLINE"), EOFError()])
+
+        async def connector(url: str, timeout: float) -> FakeSocket:
+            return socket
+
+        connection = await DouyinLiveGateway(connector=connector).connect("room-a")
+        with pytest.raises(DouyinLiveDisconnectedError):
+            _ = [event async for event in connection.events()]
+
+        assert socket.close_count == 1

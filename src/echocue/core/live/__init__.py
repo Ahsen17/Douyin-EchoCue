@@ -1,5 +1,15 @@
 from .enum import LiveRoomStatus, LiveStatusCode
-from .exception import RoomStatusCacheUnavailableError
+from .exception import (
+    DouyinLiveConnectionError,
+    DouyinLiveConnectTimeoutError,
+    DouyinLiveDisconnectedError,
+    DouyinLiveFirstStatusError,
+    DouyinLiveFirstStatusTimeoutError,
+    DouyinLiveGatewayError,
+    DouyinLiveProtocolError,
+    RoomStatusCacheUnavailableError,
+)
+from .gateway import DouyinLiveConnection, DouyinLiveEvent, DouyinLiveGateway, DouyinLiveSocket
 from .schema import (
     CommentPayloadCreate,
     CommentPayloadStruct,
@@ -47,6 +57,17 @@ __all__ = (
     "CommentWindowWorkflowInputStruct",
     "CommentWindowWorkflowInputVO",
     "DouyinLiveCommentSource",
+    "DouyinLiveConnectTimeoutError",
+    "DouyinLiveConnection",
+    "DouyinLiveConnectionError",
+    "DouyinLiveDisconnectedError",
+    "DouyinLiveEvent",
+    "DouyinLiveFirstStatusError",
+    "DouyinLiveFirstStatusTimeoutError",
+    "DouyinLiveGateway",
+    "DouyinLiveGatewayError",
+    "DouyinLiveProtocolError",
+    "DouyinLiveSocket",
     "LiveCommentEventCreate",
     "LiveCommentEventStruct",
     "LiveCommentEventVO",
