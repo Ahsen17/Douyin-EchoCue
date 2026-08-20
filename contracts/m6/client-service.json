@@ -1,0 +1,301 @@
+{
+  "schemaVersion": 1,
+  "httpEndpoints": [
+    {"method": "POST", "path": "/client/session", "operationId": "client:create-session"},
+    {"method": "DELETE", "path": "/client/session", "operationId": "client:delete-session"},
+    {"method": "GET", "path": "/client/me", "operationId": "client:me"},
+    {"method": "GET", "path": "/client/rooms", "operationId": "client:list-rooms"},
+    {"method": "POST", "path": "/client/runtimes", "operationId": "client:create-runtime"},
+    {
+      "method": "DELETE",
+      "path": "/client/runtimes/{runtime_id}",
+      "operationId": "client:delete-runtime"
+    },
+    {
+      "method": "POST",
+      "path": "/client/remediation-links",
+      "operationId": "client:create-remediation-link"
+    },
+    {"method": "POST", "path": "/webui/session", "operationId": "webui:create-session"},
+    {"method": "DELETE", "path": "/webui/session", "operationId": "webui:delete-session"},
+    {"method": "GET", "path": "/webui/me", "operationId": "webui:me"},
+    {"method": "GET", "path": "/webui/rooms", "operationId": "webui:list-rooms"},
+    {
+      "method": "POST",
+      "path": "/webui/remediation-token",
+      "operationId": "webui:consume-remediation-token"
+    }
+  ],
+  "websocketEndpoint": {
+    "path": "/client/runtime/ws/{client_id}/{room_id}/{runtime_id}"
+  },
+  "errorCodes": {
+    "retryable": ["roomOffline", "douyinliveUnavailable", "runtimeStartFailed"],
+    "remediation": ["personaNotPublished", "ruleConflict"],
+    "blocked": [
+      "unauthenticated",
+      "clientSessionConflict",
+      "permissionDenied",
+      "clientRuntimeActive",
+      "roomActiveByOtherClient"
+    ]
+  },
+  "httpExamples": {
+    "clientSessionSuccess": {
+      "request": {
+        "username": "demo_anchor",
+        "password": "fake_password",
+        "clientId": "9f3f0c45-8f2a-4cc1-9f7f-2f71ef7cd101"
+      },
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "expiresIn": 28800,
+          "user": {
+            "id": "0f1bde0a-2d78-4c1a-a2f4-6a9e4f6ff3cb",
+            "username": "demo_anchor",
+            "displayName": "Demo Anchor",
+            "isActive": true
+          }
+        }
+      }
+    },
+    "webuiSessionSuccess": {
+      "request": {"username": "admin", "password": "fake_password"},
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "expiresIn": 28800,
+          "user": {
+            "id": "7e2b5cd9-5c04-4a3e-899f-7f81499c6301",
+            "username": "admin",
+            "displayName": "Administrator",
+            "isActive": true
+          }
+        }
+      }
+    },
+    "clientMeSuccess": {
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "id": "0f1bde0a-2d78-4c1a-a2f4-6a9e4f6ff3cb",
+          "username": "demo_anchor",
+          "displayName": "Demo Anchor",
+          "isActive": true
+        }
+      }
+    },
+    "webuiMeSuccess": {
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "id": "7e2b5cd9-5c04-4a3e-899f-7f81499c6301",
+          "username": "admin",
+          "displayName": "Administrator",
+          "isActive": true
+        }
+      }
+    },
+    "clientSessionDeleteSuccess": {
+      "response": {"code": 200, "message": "ok", "data": null}
+    },
+    "webuiSessionDeleteSuccess": {
+      "response": {"code": 200, "message": "ok", "data": null}
+    },
+    "clientRoomsSuccess": {
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "items": [
+            {
+              "roomId": "516466932480",
+              "roomName": "Demo live room",
+              "anchorName": "Demo Anchor",
+              "avatarThumb": "https://example.com/avatar.jpeg",
+              "roomKind": "personal",
+              "liveStatus": "offline",
+              "canStartAssistant": true,
+              "disabledReason": null
+            },
+            {
+              "roomId": "room-without-persona",
+              "roomName": null,
+              "anchorName": null,
+              "avatarThumb": null,
+              "roomKind": "organization",
+              "liveStatus": "offline",
+              "canStartAssistant": false,
+              "disabledReason": {
+                "errorCode": "personaNotPublished",
+                "message": "A published room persona is required",
+                "issueType": "persona"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "webuiRoomsSuccess": {
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "items": [
+            {
+              "roomId": "516466932480",
+              "roomName": "Demo live room",
+              "anchorName": "Demo Anchor",
+              "avatarThumb": "https://example.com/avatar.jpeg",
+              "roomKind": "personal",
+              "liveStatus": "live"
+            }
+          ]
+        }
+      }
+    },
+    "runtimeStartSuccess": {
+      "request": {"roomId": "516466932480"},
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "runtimeId": "run_20260820_001",
+          "roomId": "516466932480",
+          "status": "starting",
+          "ws": {
+            "url": "ws://127.0.0.1:8000/client/runtime/ws/9f3f0c45-8f2a-4cc1-9f7f-2f71ef7cd101/516466932480/run_20260820_001",
+            "heartbeatIntervalSeconds": 10,
+            "heartbeatTimeoutSeconds": 30,
+            "connectRetryWindowSeconds": 30
+          }
+        }
+      }
+    },
+    "runtimeStopSuccess": {
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "runtimeId": "run_20260820_001",
+          "roomId": "516466932480",
+          "status": "stopped",
+          "reason": "clientStopped"
+        }
+      }
+    },
+    "remediationLinkSuccess": {
+      "request": {
+        "roomId": "516466932480",
+        "errorCode": "personaNotPublished",
+        "issueType": "persona"
+      },
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "url": "https://webui.example.com/remediation?token=fake_one_time_token",
+          "expiresIn": 900
+        }
+      }
+    },
+    "remediationTokenSuccess": {
+      "request": {"token": "fake_one_time_token"},
+      "response": {
+        "code": 200,
+        "message": "ok",
+        "data": {
+          "roomId": "516466932480",
+          "issueType": "persona",
+          "route": "/rooms/{roomId}/persona",
+          "params": {"roomId": "516466932480"},
+          "expiresAt": "2026-08-20T10:15:00Z"
+        }
+      }
+    },
+    "blockedFailure": {
+      "response": {
+        "code": 409,
+        "message": "permission denied",
+        "data": {
+          "errorCode": "permissionDenied",
+          "message": "The current account cannot start this room"
+        }
+      }
+    },
+    "retryableFailure": {
+      "response": {
+        "code": 409,
+        "message": "room is not live",
+        "data": {
+          "errorCode": "roomOffline",
+          "message": "The room is offline",
+          "retryable": true
+        }
+      }
+    },
+    "remediationFailure": {
+      "response": {
+        "code": 409,
+        "message": "persona not published",
+        "data": {
+          "errorCode": "personaNotPublished",
+          "message": "A published room persona is required",
+          "remediation": {
+            "issueType": "persona",
+            "route": "/rooms/{roomId}/persona",
+            "params": {"roomId": "516466932480"},
+            "requiresOneTimeToken": true
+          }
+        }
+      }
+    }
+  },
+  "websocketExamples": {
+    "connected": {
+      "type": "connected",
+      "messageId": "evtConnected001",
+      "runtimeId": "run_20260820_001",
+      "roomId": "516466932480",
+      "clientId": "9f3f0c45-8f2a-4cc1-9f7f-2f71ef7cd101",
+      "heartbeatIntervalSeconds": 10,
+      "heartbeatTimeoutSeconds": 30
+    },
+    "heartbeat": {"type": "heartbeat", "sentAt": "2026-08-20T10:00:10Z"},
+    "push": {
+      "type": "push",
+      "messageId": "msg0001",
+      "runtimeId": "run_20260820_001",
+      "roomId": "516466932480",
+      "payload": {
+        "commentDisplay": "Hello, anchor",
+        "quickReply": "Hello, welcome to the room.",
+        "cue": "Ask the viewer what they want to discuss",
+        "createdAt": "2026-08-20T10:00:12Z"
+      }
+    },
+    "ack": {
+      "type": "ack",
+      "messageId": "msg0001",
+      "status": "received",
+      "sentAt": "2026-08-20T10:00:12Z"
+    },
+    "status": {
+      "type": "status",
+      "messageId": "evtRoomEnded001",
+      "runtimeId": "run_20260820_001",
+      "roomId": "516466932480",
+      "status": "roomEnded",
+      "reason": {
+        "errorCode": "roomEnded",
+        "message": "The livestream ended and the assistant stopped",
+        "issueType": "liveStatus"
+      }
+    }
+  }
+}

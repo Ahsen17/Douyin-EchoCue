@@ -1,4 +1,5 @@
 from .enum import LiveRoomStatus, LiveStatusCode
+from .exception import RoomStatusCacheUnavailableError
 from .schema import (
     CommentPayloadCreate,
     CommentPayloadStruct,
@@ -14,6 +15,12 @@ from .schema import (
     LiveStatusPayloadVO,
 )
 from .source import DouyinLiveCommentSource
+from .status import (
+    MemoryRoomOnlineStatusCache,
+    RedisRoomOnlineStatusCache,
+    RoomOnlineStatusCache,
+    RoomOnlineStatusStruct,
+)
 from .window import (
     CommentWindowCandidateStruct,
     CommentWindowCandidateVO,
@@ -51,4 +58,9 @@ __all__ = (
     "LiveStatusPayloadCreate",
     "LiveStatusPayloadStruct",
     "LiveStatusPayloadVO",
+    "MemoryRoomOnlineStatusCache",
+    "RedisRoomOnlineStatusCache",
+    "RoomOnlineStatusCache",
+    "RoomOnlineStatusStruct",
+    "RoomStatusCacheUnavailableError",
 )

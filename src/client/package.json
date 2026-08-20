@@ -10,7 +10,8 @@
   },
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test:contract": "node --experimental-strip-types --test tests/protocol.test.ts",
     "build:electron": "tsc -p tsconfig.electron.json",
     "build:renderer": "vite build",
     "build": "npm run clean && npm run build:electron && npm run build:renderer",

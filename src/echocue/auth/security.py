@@ -4,7 +4,7 @@ This module resolves server-side sessions to users and configures Litestar sessi
 Authentication only identifies users; authorization rules should be added through guards.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from litestar.connection import ASGIConnection
@@ -15,36 +15,79 @@ from litestar.security.session_auth import SessionAuth
 from echocue.auth.client import create_auth_permission_client
 from echocue.base import AuthConfig, Config
 
+from .enum import SessionClientType
 from .schema import UserStruct
+from .session import parse_session_identity
 
-SESSION_USER_ID_KEY = "user_id"
+if TYPE_CHECKING:
+    from echocue.core.client import UserClientGuard
+
 SESSION_EXCLUDE_PATHS = (
     r"^/system(?:/.*)?$",
     "/docs",
     "/openapi.json",
 )
+USER_CLIENT_GUARD_STATE_KEY = "user_client_guard"
 
 
-async def retrieve_user_handler(session: dict[str, Any], _: ASGIConnection) -> UserStruct | None:
+async def retrieve_user_handler(session: dict[str, Any], connection: ASGIConnection) -> UserStruct | None:
     """Retrieve the authenticated user from session data."""
 
-    raw_user_id = session.get(SESSION_USER_ID_KEY)
-    if not isinstance(raw_user_id, str):
+    identity = parse_session_identity(session)
+    if identity is None:
+        return None
+
+    if not await _renew_client_binding(connection, identity.user_id, identity.client_type, identity.client_id):
+        connection.clear_session()
         return None
 
     try:
-        user_id = UUID(raw_user_id)
-    except ValueError:
+        permission_context = await create_auth_permission_client().get_permission_context(identity.user_id)
+    except NotAuthorizedException:
+        await _release_invalid_client_binding(connection, identity.user_id, identity.client_type, identity.client_id)
+        connection.clear_session()
         return None
-
-    try:
-        permission_context = await create_auth_permission_client().get_permission_context(user_id)
-    except (NotAuthorizedException, ServiceUnavailableException):
+    except ServiceUnavailableException:
         return None
 
     user = permission_context.user
 
-    return user if user and user.is_active else None
+    if user and user.is_active:
+        return user
+
+    await _release_invalid_client_binding(connection, identity.user_id, identity.client_type, identity.client_id)
+    connection.clear_session()
+    return None
+
+
+async def _renew_client_binding(
+    connection: ASGIConnection,
+    user_id: UUID,
+    client_type: SessionClientType,
+    client_id: UUID | None,
+) -> bool:
+    if client_type is not SessionClientType.CLIENT or client_id is None:
+        return True
+
+    guard = cast("UserClientGuard | None", connection.app.state.get(USER_CLIENT_GUARD_STATE_KEY))
+    if guard is None:
+        return True
+
+    return await guard.renew(user_id, client_id, expires_in=Config.get().auth.session_max_age_seconds)
+
+
+async def _release_invalid_client_binding(
+    connection: ASGIConnection,
+    user_id: UUID,
+    client_type: SessionClientType,
+    client_id: UUID | None,
+) -> None:
+    if client_type is not SessionClientType.CLIENT or client_id is None:
+        return
+
+    guard = cast("UserClientGuard | None", connection.app.state.get(USER_CLIENT_GUARD_STATE_KEY))
+    if guard is not None:
+        await guard.release(user_id, client_id)
 
 
 def create_auth(config: AuthConfig | None = None) -> SessionAuth[UserStruct, ServerSideSessionBackend]:
