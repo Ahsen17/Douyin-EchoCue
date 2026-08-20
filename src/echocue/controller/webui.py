@@ -10,7 +10,13 @@ from echocue.auth.client import create_auth_permission_client
 from echocue.auth.enum import SessionClientType
 from echocue.auth.session import create_session_data
 from echocue.base import Config
-from echocue.core.client import ClientSessionVO, ClientUserVO, WebuiSessionCreate
+from echocue.core.client import (
+    ClientSessionVO,
+    ClientUserVO,
+    WebuiRoomListVO,
+    WebuiSessionCreate,
+)
+from echocue.core.room import RoomAggregationHandler
 from echocue.shared import GenericResponse
 from echocue.shared.context import RequestContext
 
@@ -79,3 +85,22 @@ class WebuiController(Controller):
             raise NotAuthorizedException(detail="Unauthorized.")
 
         return GenericResponse(message="ok", data=ClientUserVO.from_user(ctx.user))
+
+    @get(
+        path="/rooms",
+        operation_id="webui:list-rooms",
+        summary="List webui rooms",
+    )
+    async def list_rooms(
+        self,
+        ctx: RequestContext,
+        room_aggregation_handler: RoomAggregationHandler,
+    ) -> GenericResponse[WebuiRoomListVO]:
+        """Return all visible rooms as a read-only management view."""
+
+        ctx.require_webui_session()
+        if ctx.user_id is None:
+            raise NotAuthorizedException(detail="Unauthorized.")
+
+        rooms = await room_aggregation_handler.list_rooms(ctx.user_id)
+        return GenericResponse(message="ok", data=WebuiRoomListVO.from_rooms(rooms))

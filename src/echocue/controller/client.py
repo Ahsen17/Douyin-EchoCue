@@ -9,8 +9,14 @@ from echocue.auth import UserStruct
 from echocue.auth.enum import SessionClientType
 from echocue.auth.session import create_session_data
 from echocue.base import Config
-from echocue.core.client import ClientSessionCreate, ClientSessionVO, ClientUserVO
+from echocue.core.client import (
+    ClientRoomListVO,
+    ClientSessionCreate,
+    ClientSessionVO,
+    ClientUserVO,
+)
 from echocue.core.client.handler import ClientSessionHandler
+from echocue.core.room import RoomAggregationHandler
 from echocue.shared import GenericResponse
 from echocue.shared.context import RequestContext
 
@@ -86,3 +92,22 @@ class ClientController(Controller):
             raise NotAuthorizedException(detail="Unauthorized.")
 
         return GenericResponse(message="ok", data=ClientUserVO.from_user(ctx.user))
+
+    @get(
+        path="/rooms",
+        operation_id="client:list-rooms",
+        summary="List client rooms",
+    )
+    async def list_rooms(
+        self,
+        ctx: RequestContext,
+        room_aggregation_handler: RoomAggregationHandler,
+    ) -> GenericResponse[ClientRoomListVO]:
+        """Return all visible rooms with client static start summaries."""
+
+        ctx.require_client_id()
+        if ctx.user_id is None:
+            raise NotAuthorizedException(detail="Unauthorized.")
+
+        rooms = await room_aggregation_handler.list_rooms(ctx.user_id, include_start_eligibility=True)
+        return GenericResponse(message="ok", data=ClientRoomListVO.from_rooms(rooms))

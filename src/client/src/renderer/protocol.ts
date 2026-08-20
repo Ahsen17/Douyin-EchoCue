@@ -42,7 +42,7 @@ export interface ClientRoomListData {
     disabledReason: {
       errorCode: RuntimeErrorCode;
       message: string;
-      issueType: RemediationIssueType;
+      issueType?: RemediationIssueType;
     } | null;
   }>;
 }
@@ -261,11 +261,14 @@ export function parseClientRoomListResponse(value: unknown): HttpResponse<Client
             ? null
             : (() => {
                 const reason = asObject(room.disabledReason, `${context}.disabledReason`);
-                return {
+                const result: ClientRoomListData["items"][number]["disabledReason"] = {
                   errorCode: parseRuntimeErrorCode(reason.errorCode, `${context}.disabledReason.errorCode`),
                   message: asString(reason.message, `${context}.disabledReason.message`),
-                  issueType: parseIssueType(reason.issueType, `${context}.disabledReason.issueType`),
                 };
+                if (reason.issueType !== undefined && reason.issueType !== null) {
+                  result.issueType = parseIssueType(reason.issueType, `${context}.disabledReason.issueType`);
+                }
+                return result;
               })();
         return {
           ...parseRoomBase(value, context),

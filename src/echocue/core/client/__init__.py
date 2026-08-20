@@ -12,10 +12,12 @@ from .handler import ClientSessionHandler
 from .schema import (
     ClientHttpResponse,
     ClientRoomListVO,
+    ClientRoomVO,
     ClientSessionCreate,
     ClientSessionVO,
     ClientUserVO,
     ClientWebSocketMessage,
+    DisabledReasonVO,
     RemediationContextVO,
     RemediationLinkCreate,
     RemediationLinkVO,
@@ -25,12 +27,14 @@ from .schema import (
     RuntimeStartVO,
     RuntimeStopVO,
     WebuiRoomListVO,
+    WebuiRoomVO,
     WebuiSessionCreate,
 )
 
 __all__ = (
     "ClientHttpResponse",
     "ClientRoomListVO",
+    "ClientRoomVO",
     "ClientRuntimeStatus",
     "ClientRuntimeStopReason",
     "ClientSessionCreate",
@@ -38,6 +42,7 @@ __all__ = (
     "ClientSessionVO",
     "ClientUserVO",
     "ClientWebSocketMessage",
+    "DisabledReasonVO",
     "LiveStatus",
     "MemoryUserClientGuard",
     "RedisUserClientGuard",
@@ -55,5 +60,6 @@ __all__ = (
     "RuntimeStopVO",
     "UserClientGuard",
     "WebuiRoomListVO",
+    "WebuiRoomVO",
     "WebuiSessionCreate",
 )

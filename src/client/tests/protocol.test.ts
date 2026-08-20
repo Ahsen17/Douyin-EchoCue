@@ -37,6 +37,28 @@ test("HTTP examples parse through the client protocol boundary", () => {
   assert.equal(parseEmptyResponse(examples.webuiSessionDeleteSuccess.response).data, null);
   assert.equal(parseClientRoomListResponse(examples.clientRoomsSuccess.response).data.items.length, 2);
   assert.equal(parseWebuiRoomListResponse(examples.webuiRoomsSuccess.response).data.items.length, 1);
+  const permissionDeniedRoom = parseClientRoomListResponse({
+    code: 200,
+    message: "ok",
+    data: {
+      items: [
+        {
+          roomId: "view-only-room",
+          roomName: null,
+          anchorName: null,
+          avatarThumb: null,
+          roomKind: "personal",
+          liveStatus: "offline",
+          canStartAssistant: false,
+          disabledReason: {
+            errorCode: "permissionDenied",
+            message: "Current account cannot start this room assistant.",
+          },
+        },
+      ],
+    },
+  });
+  assert.equal(permissionDeniedRoom.data.items[0]?.disabledReason?.issueType, undefined);
   assert.equal(parseRuntimeStartResponse(examples.runtimeStartSuccess.response).data.status, "starting");
   assert.equal(parseRuntimeStopResponse(examples.runtimeStopSuccess.response).data.status, "stopped");
   assert.equal(parseRemediationLinkResponse(examples.remediationLinkSuccess.response).data.expiresIn, 900);

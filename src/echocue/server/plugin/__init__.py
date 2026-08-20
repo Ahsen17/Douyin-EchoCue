@@ -7,6 +7,7 @@ from .docs import ScalarRenderPlugin
 from .lexicon import LexiconPlugin
 from .live import LivePlugin
 from .qdrant import QdrantPlugin
+from .room import RoomPlugin
 
 __all__ = (
     "AlchemyPlugin",
@@ -15,6 +16,7 @@ __all__ = (
     "LexiconPlugin",
     "LivePlugin",
     "QdrantPlugin",
+    "RoomPlugin",
     "ScalarRenderPlugin",
 )
 
@@ -25,5 +27,6 @@ plugins: tuple[PluginProtocol, ...] = (
     ContextPlugin(),
     LexiconPlugin(),
     LivePlugin(),
+    RoomPlugin(),
     QdrantPlugin(),
 )

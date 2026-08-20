@@ -1,11 +1,12 @@
 """Webui session controller tests."""
 
 from types import SimpleNamespace
+from typing import NoReturn, cast
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from litestar import Litestar
+from litestar import Litestar, Request
 from litestar.di import Provide
 from litestar.exceptions import HTTPException, ServiceUnavailableException, ValidationException
 from litestar.status_codes import (
@@ -18,20 +19,27 @@ from litestar.stores.memory import MemoryStore
 from litestar.testing import AsyncTestClient
 from pytest import MonkeyPatch
 
-from echocue.auth import AuthenticationResultStruct, PermissionContextStruct, UserStruct
+from echocue.auth import AuthenticationResultStruct, AuthPermissionClient, PermissionContextStruct, UserStruct
 from echocue.auth.security import create_auth
 from echocue.base import Config
 from echocue.controller.client import ClientController
 from echocue.controller.webui import WebuiController
 from echocue.core.client import ClientSessionHandler, MemoryUserClientGuard
+from echocue.core.live import MemoryRoomOnlineStatusCache
+from echocue.core.room import RoomAggregationHandler
 from echocue.shared import ApplicationError
 from echocue.shared.context import provide_request_context
 from echocue.shared.exception import (
     app_error_handler,
     http_exception_handler,
-    internal_exception_handler,
     validation_exception_handler,
 )
+
+
+def raise_internal_exception(_: Request, exc: Exception) -> NoReturn:
+    """Expose unexpected controller errors during tests."""
+
+    raise exc
 
 
 class TestWebuiController:
@@ -41,6 +49,7 @@ class TestWebuiController:
     user: UserStruct
     auth_client: SimpleNamespace
     guard: MemoryUserClientGuard
+    room_aggregation_handler: RoomAggregationHandler
 
     @pytest.fixture(autouse=True)
     def set_up(self, monkeypatch: MonkeyPatch) -> None:
@@ -50,22 +59,6 @@ class TestWebuiController:
             self.guard,
             session_max_age_seconds=config.auth.session_max_age_seconds,
         )
-        self.app = Litestar(
-            route_handlers=[ClientController, WebuiController],
-            dependencies={
-                "ctx": Provide(provide_request_context),
-                "client_session_handler": Provide(lambda: client_session_handler, sync_to_thread=False),
-            },
-            exception_handlers={
-                ApplicationError: app_error_handler,
-                ValidationException: validation_exception_handler,
-                HTTPException: http_exception_handler,
-                Exception: internal_exception_handler,
-            },
-            on_app_init=[create_auth(config.auth).on_app_init],
-            stores={config.auth.session_store_name: MemoryStore()},
-        )
-        monkeypatch.setattr(Config, "get", classmethod(lambda cls, filename="config.yaml": config))
         self.user = UserStruct(id=uuid4(), username="webui-user")
         context = PermissionContextStruct(user=self.user)
         self.auth_client = SimpleNamespace(
@@ -73,6 +66,27 @@ class TestWebuiController:
             get_permission_context=AsyncMock(return_value=context),
             check_permission=AsyncMock(),
         )
+        self.room_aggregation_handler = RoomAggregationHandler(
+            cast(AuthPermissionClient, self.auth_client),
+            MemoryRoomOnlineStatusCache(),
+        )
+        self.app = Litestar(
+            route_handlers=[ClientController, WebuiController],
+            dependencies={
+                "ctx": Provide(provide_request_context),
+                "client_session_handler": Provide(lambda: client_session_handler, sync_to_thread=False),
+                "room_aggregation_handler": Provide(lambda: self.room_aggregation_handler, sync_to_thread=False),
+            },
+            exception_handlers={
+                ApplicationError: app_error_handler,
+                ValidationException: validation_exception_handler,
+                HTTPException: http_exception_handler,
+                Exception: raise_internal_exception,
+            },
+            on_app_init=[create_auth(config.auth).on_app_init],
+            stores={config.auth.session_store_name: MemoryStore()},
+        )
+        monkeypatch.setattr(Config, "get", classmethod(lambda cls, filename="config.yaml": config))
         monkeypatch.setattr("echocue.controller.webui.create_auth_permission_client", lambda: self.auth_client)
         monkeypatch.setattr("echocue.core.client.handler.create_auth_permission_client", lambda: self.auth_client)
         monkeypatch.setattr("echocue.shared.context.create_auth_permission_client", lambda: self.auth_client)
@@ -141,6 +155,16 @@ class TestWebuiController:
 
         assert login_response.status_code == HTTP_200_OK
         assert client_me_response.status_code == HTTP_401_UNAUTHORIZED
+
+    async def test_lists_rooms_for_webui_session_only(self) -> None:
+        async with AsyncTestClient(app=self.app) as client:
+            unauthenticated_response = await client.get("/webui/rooms")
+            await client.post("/webui/session", json=self._login_payload())
+            response = await client.get("/webui/rooms")
+
+        assert unauthenticated_response.status_code == HTTP_401_UNAUTHORIZED
+        assert response.status_code == HTTP_200_OK
+        assert response.json() == {"code": 200, "message": "ok", "data": {"items": []}}
 
     async def test_client_and_webui_sessions_coexist_without_sharing_guard(self) -> None:
         client_id = uuid4()

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
 from echocue.base import CamelizedBaseStruct
+from echocue.core.room import RoomStartBlockReason
 
 from .enum import (
     ClientRuntimeStatus,
@@ -22,14 +23,17 @@ from .enum import (
 
 if TYPE_CHECKING:
     from echocue.auth import UserStruct
+    from echocue.core.room import RoomAggregateStruct
 
 __all__ = (
     "ClientHttpResponse",
     "ClientRoomListVO",
+    "ClientRoomVO",
     "ClientSessionCreate",
     "ClientSessionVO",
     "ClientUserVO",
     "ClientWebSocketMessage",
+    "DisabledReasonVO",
     "RemediationContextVO",
     "RemediationLinkCreate",
     "RemediationLinkVO",
@@ -39,6 +43,7 @@ __all__ = (
     "RuntimeStartVO",
     "RuntimeStopVO",
     "WebuiRoomListVO",
+    "WebuiRoomVO",
     "WebuiSessionCreate",
 )
 
@@ -98,7 +103,7 @@ class DisabledReasonVO(CamelizedBaseStruct):
 
     error_code: RuntimeErrorCode
     message: str
-    issue_type: RemediationIssueType
+    issue_type: RemediationIssueType | None = None
 
 
 class ClientRoomVO(CamelizedBaseStruct):
@@ -113,11 +118,35 @@ class ClientRoomVO(CamelizedBaseStruct):
     can_start_assistant: bool
     disabled_reason: DisabledReasonVO | None
 
+    @classmethod
+    def from_room(cls, room: "RoomAggregateStruct") -> "ClientRoomVO":
+        """Build a client view from a shared room aggregate."""
+
+        if room.start_eligibility is None:
+            raise ValueError("Client room aggregation requires start eligibility.")
+
+        return cls(
+            room_id=room.room_id,
+            room_name=room.room_name,
+            anchor_name=room.anchor_name,
+            avatar_thumb=room.avatar_thumb,
+            room_kind=RoomKind(room.room_kind.value),
+            live_status=LiveStatus(room.live_status.value),
+            can_start_assistant=room.start_eligibility.allowed,
+            disabled_reason=_disabled_reason(room.start_eligibility.block_reason),
+        )
+
 
 class ClientRoomListVO(CamelizedBaseStruct):
     """Complete room list visible to the desktop client."""
 
     items: list[ClientRoomVO]
+
+    @classmethod
+    def from_rooms(cls, rooms: list["RoomAggregateStruct"]) -> "ClientRoomListVO":
+        """Build a client room list from shared room aggregates."""
+
+        return cls(items=[ClientRoomVO.from_room(room) for room in rooms])
 
 
 class WebuiRoomVO(CamelizedBaseStruct):
@@ -130,11 +159,52 @@ class WebuiRoomVO(CamelizedBaseStruct):
     room_kind: RoomKind
     live_status: LiveStatus
 
+    @classmethod
+    def from_room(cls, room: "RoomAggregateStruct") -> "WebuiRoomVO":
+        """Build a webui view from a shared room aggregate."""
+
+        return cls(
+            room_id=room.room_id,
+            room_name=room.room_name,
+            anchor_name=room.anchor_name,
+            avatar_thumb=room.avatar_thumb,
+            room_kind=RoomKind(room.room_kind.value),
+            live_status=LiveStatus(room.live_status.value),
+        )
+
 
 class WebuiRoomListVO(CamelizedBaseStruct):
     """Complete room list visible to the webui."""
 
     items: list[WebuiRoomVO]
+
+    @classmethod
+    def from_rooms(cls, rooms: list["RoomAggregateStruct"]) -> "WebuiRoomListVO":
+        """Build a webui room list from shared room aggregates."""
+
+        return cls(items=[WebuiRoomVO.from_room(room) for room in rooms])
+
+
+def _disabled_reason(block_reason: RoomStartBlockReason | None) -> DisabledReasonVO | None:
+    if block_reason is None:
+        return None
+    if block_reason is RoomStartBlockReason.PERMISSION_DENIED:
+        return DisabledReasonVO(
+            error_code=RuntimeErrorCode.PERMISSION_DENIED,
+            message="Current account cannot start this room assistant.",
+        )
+    if block_reason is RoomStartBlockReason.PERSONA_NOT_PUBLISHED:
+        return DisabledReasonVO(
+            error_code=RuntimeErrorCode.PERSONA_NOT_PUBLISHED,
+            message="A published room persona is required.",
+            issue_type=RemediationIssueType.PERSONA,
+        )
+
+    return DisabledReasonVO(
+        error_code=RuntimeErrorCode.RULE_CONFLICT,
+        message="Published safety rules contain a conflict.",
+        issue_type=RemediationIssueType.RULE,
+    )
 
 
 class RuntimeStart(CamelizedBaseStruct):
