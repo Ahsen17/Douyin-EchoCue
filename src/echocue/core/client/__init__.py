@@ -7,6 +7,8 @@ from .enum import (
     RuntimeErrorCode,
     RuntimeEventStatus,
 )
+from .guard import MemoryUserClientGuard, RedisUserClientGuard, UserClientGuard
+from .handler import ClientSessionHandler
 from .schema import (
     ClientHttpResponse,
     ClientRoomListVO,
@@ -32,10 +34,13 @@ __all__ = (
     "ClientRuntimeStatus",
     "ClientRuntimeStopReason",
     "ClientSessionCreate",
+    "ClientSessionHandler",
     "ClientSessionVO",
     "ClientUserVO",
     "ClientWebSocketMessage",
     "LiveStatus",
+    "MemoryUserClientGuard",
+    "RedisUserClientGuard",
     "RemediationContextVO",
     "RemediationIssueType",
     "RemediationLinkCreate",
@@ -48,6 +53,7 @@ __all__ = (
     "RuntimeStart",
     "RuntimeStartVO",
     "RuntimeStopVO",
+    "UserClientGuard",
     "WebuiRoomListVO",
     "WebuiSessionCreate",
 )

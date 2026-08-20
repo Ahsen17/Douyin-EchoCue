@@ -5,7 +5,7 @@ session, runtime, or transport behavior.
 """
 
 from datetime import datetime
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
 from echocue.base import CamelizedBaseStruct
@@ -19,6 +19,9 @@ from .enum import (
     RuntimeErrorCode,
     RuntimeEventStatus,
 )
+
+if TYPE_CHECKING:
+    from echocue.auth import UserStruct
 
 __all__ = (
     "ClientHttpResponse",
@@ -47,6 +50,17 @@ class ClientUserVO(CamelizedBaseStruct):
     username: str
     display_name: str
     is_active: bool
+
+    @classmethod
+    def from_user(cls, user: "UserStruct") -> "ClientUserVO":
+        """Build the client-facing identity from an authenticated user."""
+
+        return cls(
+            id=user.id,
+            username=user.username,
+            display_name=user.username,
+            is_active=user.is_active,
+        )
 
 
 class ClientHttpResponse[T](CamelizedBaseStruct):

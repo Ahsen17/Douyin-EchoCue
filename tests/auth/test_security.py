@@ -1,10 +1,18 @@
 from datetime import timedelta
+from types import SimpleNamespace
 from typing import Any, cast
+from unittest.mock import AsyncMock, Mock
+from uuid import uuid4
 
+import pytest
+from litestar.exceptions import NotAuthorizedException, ServiceUnavailableException
 from litestar.middleware.session.server_side import ServerSideSessionConfig
 from litestar.stores.memory import MemoryStore
+from pytest import MonkeyPatch
 
-from echocue.auth.security import SESSION_EXCLUDE_PATHS, create_auth
+from echocue.auth import SessionClientType
+from echocue.auth.security import SESSION_EXCLUDE_PATHS, create_auth, retrieve_user_handler
+from echocue.auth.session import create_session_data
 from echocue.base import AuthConfig
 
 
@@ -49,3 +57,57 @@ class TestSessionAuth:
 
         assert session_data is None
         assert await store.exists("session-id") is False
+
+    @pytest.mark.parametrize(
+        ("auth_error", "expected_release_count", "expected_clear_count"),
+        [
+            (NotAuthorizedException(detail="Invalid session."), 1, 1),
+            (ServiceUnavailableException(detail="Auth unavailable."), 0, 0),
+        ],
+    )
+    async def test_invalid_user_releases_client_guard_but_auth_outage_does_not(
+        self,
+        monkeypatch: MonkeyPatch,
+        auth_error: Exception,
+        expected_release_count: int,
+        expected_clear_count: int,
+    ) -> None:
+        user_id = uuid4()
+        client_id = uuid4()
+        guard = SimpleNamespace(renew=AsyncMock(return_value=True), release=AsyncMock())
+        connection = SimpleNamespace(
+            app=SimpleNamespace(state={"user_client_guard": guard}),
+            clear_session=Mock(),
+        )
+        auth_client = SimpleNamespace(get_permission_context=AsyncMock(side_effect=auth_error))
+        monkeypatch.setattr("echocue.auth.security.create_auth_permission_client", lambda: auth_client)
+
+        user = await retrieve_user_handler(
+            create_session_data(user_id, SessionClientType.CLIENT, client_id),
+            cast(Any, connection),
+        )
+
+        assert user is None
+        guard.renew.assert_awaited_once_with(user_id, client_id, expires_in=28_800)
+        assert guard.release.await_count == expected_release_count
+        assert connection.clear_session.call_count == expected_clear_count
+
+    async def test_missing_or_conflicting_client_guard_invalidates_session(self, monkeypatch: MonkeyPatch) -> None:
+        user_id = uuid4()
+        client_id = uuid4()
+        guard = SimpleNamespace(renew=AsyncMock(return_value=False), release=AsyncMock())
+        connection = SimpleNamespace(
+            app=SimpleNamespace(state={"user_client_guard": guard}),
+            clear_session=Mock(),
+        )
+        auth_client = SimpleNamespace(get_permission_context=AsyncMock())
+        monkeypatch.setattr("echocue.auth.security.create_auth_permission_client", lambda: auth_client)
+
+        user = await retrieve_user_handler(
+            create_session_data(user_id, SessionClientType.CLIENT, client_id),
+            cast(Any, connection),
+        )
+
+        assert user is None
+        connection.clear_session.assert_called_once_with()
+        auth_client.get_permission_context.assert_not_awaited()

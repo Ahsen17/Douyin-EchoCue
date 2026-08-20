@@ -117,6 +117,9 @@ class TestAuthPlugin:
             assert "sessions" in app_config.stores
         else:
             assert app_config.stores.get("sessions") is not None
+        assert "client_session_handler" in app_config.state
+        assert "user_client_guard" in app_config.state
+        assert "client_session_handler" in app_config.dependencies
 
 
 class TestAuthComposeConfig:
