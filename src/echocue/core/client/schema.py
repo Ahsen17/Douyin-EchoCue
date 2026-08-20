@@ -37,7 +37,7 @@ __all__ = (
     "RemediationContextVO",
     "RemediationLinkCreate",
     "RemediationLinkVO",
-    "RemediationTokenConsume",
+    "RemediationTokenConsumptionCreate",
     "RuntimeFailureVO",
     "RuntimeStart",
     "RuntimeStartVO",
@@ -273,8 +273,8 @@ class RemediationLinkVO(CamelizedBaseStruct):
     expires_in: int
 
 
-class RemediationTokenConsume(CamelizedBaseStruct):
-    """One-time remediation token consumption payload."""
+class RemediationTokenConsumptionCreate(CamelizedBaseStruct):
+    """Request to create a one-time remediation token consumption."""
 
     token: str
 

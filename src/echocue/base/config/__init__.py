@@ -1,6 +1,7 @@
 from .alchemy import AlchemyConfig
 from .app import AppConfig
 from .auth import AuthConfig
+from .client import ClientConfig
 from .config import Config
 from .embedding import EmbeddingConfig
 from .lexicon import LexiconConfig
@@ -14,6 +15,7 @@ __all__ = (
     "AlchemyConfig",
     "AppConfig",
     "AuthConfig",
+    "ClientConfig",
     "Config",
     "EmbeddingConfig",
     "LLMConfig",

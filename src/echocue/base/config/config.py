@@ -8,6 +8,7 @@ from echocue.base.schema import BaseStruct
 from .alchemy import AlchemyConfig
 from .app import AppConfig
 from .auth import AuthConfig
+from .client import ClientConfig
 from .constants import BASE_DIR
 from .embedding import EmbeddingConfig
 from .lexicon import LexiconConfig
@@ -28,6 +29,7 @@ class Config(BaseStruct):
     app: AppConfig = field(default_factory=AppConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
+    client: ClientConfig = field(default_factory=ClientConfig)
 
     redis: RedisConfig = field(default_factory=RedisConfig)
     qdrant: QdrantConfig = field(default_factory=QdrantConfig)
@@ -144,4 +146,10 @@ _ENV_OVERRIDES: tuple[tuple[str, tuple[str, ...], type[Any]], ...] = (
     ("ECHOCUE_AUTH_SESSION_MAX_AGE_SECONDS", ("auth", "session_max_age_seconds"), int),
     ("ECHOCUE_AUTH_SESSION_RENEW_ON_ACCESS", ("auth", "session_renew_on_access"), bool),
     ("ECHOCUE_AUTH_SESSION_COOKIE_SECURE", ("auth", "session_cookie_secure"), bool),
+    ("ECHOCUE_CLIENT_REMEDIATION_URL", ("client", "remediation_url"), str),
+    (
+        "ECHOCUE_CLIENT_REMEDIATION_TOKEN_TTL_SECONDS",
+        ("client", "remediation_token_ttl_seconds"),
+        int,
+    ),
 )

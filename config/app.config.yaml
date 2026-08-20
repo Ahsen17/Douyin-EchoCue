@@ -28,6 +28,10 @@ auth:
   grpc_host: "0.0.0.0"
   grpc_port: 50052
 
+client:
+  remediation_url: "http://localhost:3000/remediation"
+  remediation_token_ttl_seconds: 900
+
 lexicon:
   grpc_enabled: true
   grpc_target: "lexicon:50051"

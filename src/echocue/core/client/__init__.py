@@ -9,6 +9,13 @@ from .enum import (
 )
 from .guard import MemoryUserClientGuard, RedisUserClientGuard, UserClientGuard
 from .handler import ClientSessionHandler
+from .remediation import (
+    MemoryRemediationStore,
+    RedisRemediationStore,
+    RemediationFailureStruct,
+    RemediationHandler,
+    RemediationStore,
+)
 from .schema import (
     ClientHttpResponse,
     ClientRoomListVO,
@@ -21,7 +28,7 @@ from .schema import (
     RemediationContextVO,
     RemediationLinkCreate,
     RemediationLinkVO,
-    RemediationTokenConsume,
+    RemediationTokenConsumptionCreate,
     RuntimeFailureVO,
     RuntimeStart,
     RuntimeStartVO,
@@ -44,13 +51,18 @@ __all__ = (
     "ClientWebSocketMessage",
     "DisabledReasonVO",
     "LiveStatus",
+    "MemoryRemediationStore",
     "MemoryUserClientGuard",
+    "RedisRemediationStore",
     "RedisUserClientGuard",
     "RemediationContextVO",
+    "RemediationFailureStruct",
+    "RemediationHandler",
     "RemediationIssueType",
     "RemediationLinkCreate",
     "RemediationLinkVO",
-    "RemediationTokenConsume",
+    "RemediationStore",
+    "RemediationTokenConsumptionCreate",
     "RoomKind",
     "RuntimeErrorCode",
     "RuntimeEventStatus",

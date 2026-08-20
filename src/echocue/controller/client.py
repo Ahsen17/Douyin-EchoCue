@@ -14,6 +14,9 @@ from echocue.core.client import (
     ClientSessionCreate,
     ClientSessionVO,
     ClientUserVO,
+    RemediationHandler,
+    RemediationLinkCreate,
+    RemediationLinkVO,
 )
 from echocue.core.client.handler import ClientSessionHandler
 from echocue.core.room import RoomAggregationHandler
@@ -111,3 +114,23 @@ class ClientController(Controller):
 
         rooms = await room_aggregation_handler.list_rooms(ctx.user_id, include_start_eligibility=True)
         return GenericResponse(message="ok", data=ClientRoomListVO.from_rooms(rooms))
+
+    @post(
+        path="/remediation-links",
+        operation_id="client:create-remediation-link",
+        summary="Create remediation link",
+    )
+    async def create_remediation_link(
+        self,
+        data: RemediationLinkCreate,
+        ctx: RequestContext,
+        remediation_handler: RemediationHandler,
+    ) -> GenericResponse[RemediationLinkVO]:
+        """Create a one-time webui link for the latest client failure."""
+
+        client_id = ctx.require_client_id()
+        if ctx.user_id is None:
+            raise NotAuthorizedException(detail="Unauthorized.")
+
+        result = await remediation_handler.create_link(ctx.user_id, client_id, data)
+        return GenericResponse(message="ok", data=result)

@@ -13,6 +13,9 @@ from echocue.base import Config
 from echocue.core.client import (
     ClientSessionVO,
     ClientUserVO,
+    RemediationContextVO,
+    RemediationHandler,
+    RemediationTokenConsumptionCreate,
     WebuiRoomListVO,
     WebuiSessionCreate,
 )
@@ -104,3 +107,19 @@ class WebuiController(Controller):
 
         rooms = await room_aggregation_handler.list_rooms(ctx.user_id)
         return GenericResponse(message="ok", data=WebuiRoomListVO.from_rooms(rooms))
+
+    @post(
+        path="/remediation-token-consumptions",
+        operation_id="webui:create-remediation-token-consumption",
+        summary="Create remediation token consumption",
+        exclude_from_auth=True,
+    )
+    async def create_remediation_token_consumption(
+        self,
+        data: RemediationTokenConsumptionCreate,
+        remediation_handler: RemediationHandler,
+    ) -> GenericResponse[RemediationContextVO]:
+        """Create a one-time token consumption without a webui session."""
+
+        result = await remediation_handler.consume_token(data.token)
+        return GenericResponse(message="ok", data=result)

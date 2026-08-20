@@ -22,8 +22,8 @@
     {"method": "GET", "path": "/webui/rooms", "operationId": "webui:list-rooms"},
     {
       "method": "POST",
-      "path": "/webui/remediation-token",
-      "operationId": "webui:consume-remediation-token"
+      "path": "/webui/remediation-token-consumptions",
+      "operationId": "webui:create-remediation-token-consumption"
     }
   ],
   "websocketEndpoint": {
@@ -204,7 +204,7 @@
         }
       }
     },
-    "remediationTokenSuccess": {
+    "remediationTokenConsumptionSuccess": {
       "request": {"token": "fake_one_time_token"},
       "response": {
         "code": 200,

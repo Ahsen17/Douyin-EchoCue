@@ -63,7 +63,7 @@ test("HTTP examples parse through the client protocol boundary", () => {
   assert.equal(parseRuntimeStopResponse(examples.runtimeStopSuccess.response).data.status, "stopped");
   assert.equal(parseRemediationLinkResponse(examples.remediationLinkSuccess.response).data.expiresIn, 900);
   assert.equal(
-    parseRemediationContextResponse(examples.remediationTokenSuccess.response).data.issueType,
+    parseRemediationContextResponse(examples.remediationTokenConsumptionSuccess.response).data.issueType,
     "persona",
   );
 

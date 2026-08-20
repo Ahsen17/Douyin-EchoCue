@@ -17,7 +17,7 @@ from echocue.core.client import (
     RemediationContextVO,
     RemediationLinkCreate,
     RemediationLinkVO,
-    RemediationTokenConsume,
+    RemediationTokenConsumptionCreate,
     RuntimeErrorCode,
     RuntimeFailureVO,
     RuntimeStart,
@@ -41,7 +41,11 @@ EXPECTED_HTTP_ENDPOINTS = {
     ("DELETE", "/webui/session", "webui:delete-session"),
     ("GET", "/webui/me", "webui:me"),
     ("GET", "/webui/rooms", "webui:list-rooms"),
-    ("POST", "/webui/remediation-token", "webui:consume-remediation-token"),
+    (
+        "POST",
+        "/webui/remediation-token-consumptions",
+        "webui:create-remediation-token-consumption",
+    ),
 }
 EXPECTED_ERROR_CODES = {
     "roomOffline",
@@ -55,6 +59,7 @@ EXPECTED_ERROR_CODES = {
     "clientRuntimeActive",
     "roomActiveByOtherClient",
 }
+RPC_PATH_SEGMENTS = {"consume", "create", "delete", "login", "logout", "start", "stop", "update"}
 
 
 def load_contract() -> dict[str, Any]:
@@ -80,6 +85,13 @@ class TestClientContract:
             assert method in {"GET", "POST", "DELETE"}
             assert re.fullmatch(r"/(?:[a-z]+(?:-[a-z]+)*|\{[a-z]+(?:_[a-z]+)*\})(?:/[^/]+)*", path)
             assert re.fullmatch(r"(?:client|webui):[a-z]+(?:-[a-z]+)*", operation_id)
+            path_words = {
+                word
+                for segment in path.split("/")
+                if segment and not segment.startswith("{")
+                for word in segment.split("-")
+            }
+            assert path_words.isdisjoint(RPC_PATH_SEGMENTS)
 
     def test_error_code_catalog_matches_runtime_error_enum(self) -> None:
         contract = load_contract()
@@ -146,9 +158,12 @@ class TestClientContract:
             examples["remediationLinkSuccess"]["response"],
             type=ClientHttpResponse[RemediationLinkVO],
         )
-        convert(examples["remediationTokenSuccess"]["request"], type=RemediationTokenConsume)
         convert(
-            examples["remediationTokenSuccess"]["response"],
+            examples["remediationTokenConsumptionSuccess"]["request"],
+            type=RemediationTokenConsumptionCreate,
+        )
+        convert(
+            examples["remediationTokenConsumptionSuccess"]["response"],
             type=ClientHttpResponse[RemediationContextVO],
         )
 
